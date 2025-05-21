@@ -398,6 +398,7 @@ def preprocess_data(
     # Load London LSOAs and filter burglaries
     london_lsoas = load_london_lsoas(london_lsoa_path)
     df = load_burglary_data(burglary_path)
+    # put code here :)
     df = df[df['LSOA code'].isin(london_lsoas)]
 
     # Build the full LSOA×Month grid
@@ -429,7 +430,7 @@ def preprocess_data(
     # Lag features
     model_df = compute_lag_features(model_df)
     model_df = compute_custom_deprivation_score(model_df)
-    model_dfdf = add_moving_averages(model_df, target_col='Burglary Count', windows=[3, 6])
+    model_df = add_moving_averages(model_df, target_col='Burglary Count', windows=[3, 6])
 
     
     return model_df
