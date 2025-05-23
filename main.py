@@ -8,10 +8,27 @@ from sklearn.metrics import (
     mean_squared_error, r2_score, mean_absolute_error,
     accuracy_score, classification_report, roc_auc_score, confusion_matrix
 )
-
 import seaborn as sns
 from preprocessing import preprocess_data
 import os
+from sklearn.preprocessing import StandardScaler
+from sklearn.impute import SimpleImputer
+import geopandas as gpd
+from esda.moran import Moran
+from libpysal.weights import Queen
+weights = {
+    'b. Income Deprivation Domain': 23.82,
+    'c. Employment Deprivation Domain': 23.82,
+    'e. Health Deprivation and Disability Domain': 7.15,
+    'd. Education, Skills and Training Domain': 7.15,
+
+    'g. Barriers to Housing and Services Domain': 5.91,
+    'h. Living Environment Deprivation Domain': 5.91,
+    'Digital Propensity Score_rev': 7.15,
+    'Energy_All_rev': 5.91,
+    'PTAL_rev': 5.91,
+    'Mean Age': 7.15
+}
 
 
 def train_eval_models(df, save_models=True):
@@ -22,11 +39,46 @@ def train_eval_models(df, save_models=True):
     train = df[df['Month'] <= cutoff].copy()
     test = df[df['Month'] > cutoff].copy()
     print(f"Train rows: {train.shape[0]}, Test rows: {test.shape[0]}")
+    # Ensure all necessary columns are present and fill NaNs
+# Reverse feature transformations (apply to both train and test)
+    for df_split in [train, test]:
+       df_split['PTAL_rev'] = df_split['PTAL'].max() - df_split['PTAL']
+       df_split['Energy_All_rev'] = df_split['Energy_All'].max() - df_split['Energy_All']
+       df_split['Digital Propensity Score_rev'] = df_split['Digital Propensity Score'].max() - df_split['Digital Propensity Score']
+
+
+    for col in weights:
+       if col not in train.columns:
+        raise ValueError(f"Missing feature '{col}' needed for sample weight calculation.")
+
+       train[col] = train[col].fillna(0)
+
+
+    # Compute weighted sum across selected features
+    sample_weights = train[list(weights.keys())].mul(pd.Series(weights), axis=1).sum(axis=1)
+    sample_weights = sample_weights / sample_weights.mean()
+
+
 
     # Prepare features and targets
-    exclude = ['LSOA code', 'Month', 'Burglary Count', 'Year', "IMD Score", "PTAL",
-               "Male", "Female", "Mean Male Age", "Mean Female Age", "Population"]
-    features = [c for c in df.columns if c not in exclude]
+    exclude = ['LSOA code', 'Month', 'Burglary Count', 'Year', 'IMD Score',
+               "Male", "Female", "Mean Male Age", "Mean Female Age", "Population", 
+            #    "b. Income Deprivation Domain", "c. Employment Deprivation Domain", "d. Education, Skills and Training Domain", 
+            #    "e. Health Deprivation and Disability Domain", 
+            "f. Crime Domain", 
+            # "g. Barriers to Housing and Services Domain", 
+            #    "h. Living Environment Deprivation Domain", 
+                'Digital Propensity Score', 
+                'Energy_All', 
+                #'Mean Age', 
+            #'Burglary Count_MA3', 'Burglary Count_MA6',
+               'Custom_IMD_Score', 
+               'i. Income Deprivation Affecting Children Index (IDACI)', 'j. Income Deprivation Affecting Older People Index (IDAOPI)', 'Male/Female Ratio',
+                'AvPTAI2015',
+                'PTAL', 'Lag1', 'Lag2', 
+               'Custom Deprivation Score']
+    features = [c for c in train.columns if c not in exclude]
+  
     X_train, X_test = train[features], test[features]
     y_train_r, y_test_r = train['Burglary Count'], test['Burglary Count']
     y_train_c, y_test_c = (y_train_r > 0).astype(int), (y_test_r > 0).astype(int)
@@ -42,7 +94,7 @@ def train_eval_models(df, save_models=True):
         min_samples_split=5, max_features='sqrt',
         random_state=42
     )
-    reg.fit(X_train, y_train_r)
+    reg.fit(X_train, y_train_r, sample_weight=sample_weights)
 
     # Evaluate the regression model
     preds_r = reg.predict(X_test)
@@ -55,10 +107,6 @@ def train_eval_models(df, save_models=True):
     print(f" MAE:  {mae:.2f}")
     print(f" R²:   {r2:.3f}")
 
-    if save_models:
-        from joblib import dump
-        dump(reg, 'models/burglary_regressor_improved.joblib')
-        print("Saved improved regression model to models/burglary_regressor_improved.joblib")
 
     # CLASSIFICATION MODEL
     print("\n--- CLASSIFICATION MODEL ---")
@@ -226,16 +274,19 @@ def main():
     print(df.sample(5).to_string())
     reg, clf, features, selected_features, X_test, y_test_r, y_test_c, preds_r, preds_c, preds_proba = \
         train_eval_models(df, save_models=SAVE_MODELS)
+    print(df.head())
 
     try:
-        visualize_results(
-            reg, clf, features, selected_features, X_test, y_test_r, y_test_c,
-            preds_r, preds_c, preds_proba
-        )
+       visualize_results(
+           reg, clf, features, selected_features, X_test, y_test_r, y_test_c,
+           preds_r, preds_c, preds_proba
+       )
     except Exception as e:
-        print(f"WARNING: Error during visualization: {e}")
+       print(f"WARNING: Error during visualization: {e}")
 
     print("Analysis complete")
+
+
 
 
 if __name__ == '__main__':
