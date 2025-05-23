@@ -359,44 +359,7 @@ def compute_lag_features(df: pd.DataFrame, lags=(1, 2)) -> pd.DataFrame:
         df[f'Lag{lag}'] = df.groupby('LSOA code')['Burglary Count'].shift(lag).fillna(0)
     return df
 
-def compute_custom_deprivation_score(df: pd.DataFrame) -> pd.DataFrame:
-    print("Computing custom deprivation score")
 
-    # Define mapping: column -> weight
-    weights = {
-        'b. Income Deprivation Domain': 22.5,
-        'c. Employment Deprivation Domain': 22.5,
-        'e. Health Deprivation and Disability Domain': 6.75,
-        'd. Education, Skills and Training Domain': 6.75,
-        'f. Crime Domain': 5.58,
-        'g. Barriers to Housing and Services Domain': 5.58,
-        'h. Living Environment Deprivation Domain': 5.58,
-        'Digital Propensity Score': 6.75,
-        'Energy_All': 5.58,
-        'PTAL': 5.58,
-        'Mean Age': 6.75
-    }
-
-    reverse_features = {'Digital Propensity Score', 'Energy_All', 'PTAL'}
-
-    total_weight = sum(weights.values())
-    normalized_features = pd.DataFrame()
-
-    for feature, weight in weights.items():
-        if feature not in df.columns:
-            raise ValueError(f"Missing required feature: {feature}")
-        
-        col = pd.to_numeric(df[feature], errors='coerce').fillna(df[feature].median())
-        col_norm = (col - col.min()) / (col.max() - col.min())
-        
-        # Reverse if higher value = less deprived
-        if feature in reverse_features:
-            col_norm = 1 - col_norm
-
-        normalized_features[feature] = col_norm * (weight / total_weight)
-
-    df['Custom Deprivation Score'] = normalized_features.sum(axis=1)
-    return df
 def add_moving_averages(df, target_col='Burglary Count', windows=[3, 6]):
     """
     Adds moving averages over time for a given target column.
@@ -411,12 +374,7 @@ def add_moving_averages(df, target_col='Burglary Count', windows=[3, 6]):
     
     return df
 
-def compute_custom_score(df, weights):
-    weighted_score = np.zeros(len(df))
-    for col, w in weights.items():
-        if col in df.columns:
-            weighted_score += df[col] * w
-    return weighted_score / sum(weights.values())
+
 
 
 
@@ -471,7 +429,6 @@ def preprocess_data(
 
     # Lag features
     model_df = compute_lag_features(model_df)
-    model_df = compute_custom_deprivation_score(model_df)
     model_df = add_moving_averages(model_df, target_col='Burglary Count', windows=[3, 6])
     gdf = gpd.read_file("boundaries/LSOA_2011_London_gen_MHW.shp")
     gdf = gdf.to_crs(epsg=27700)
