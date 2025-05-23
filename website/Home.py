@@ -24,5 +24,15 @@ Stay informed, stay safe!
 """)
 
 st.markdown("---")
+
+st.markdown("**Enter your LSOA code**")
+# Input field for LSOA
+lsoa_input = st.text_input(label = "Your LSOA code is a 9 digit sequence (eg. E01000001):", placeholder = "Type your LSOA here...", max_chars = 9)
+
+# Just a check to show what the user typed (can remove this if we wish to)
+if lsoa_input:
+    st.success(f"You Entered: {lsoa_input}")
+
+st.markdown("---")
 st.caption("Developed by the London Crime Data Analytics Team")
 
