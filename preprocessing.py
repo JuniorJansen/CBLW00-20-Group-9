@@ -1,6 +1,13 @@
 import pandas as pd
 import numpy as np
 import re
+import geopandas as gpd
+from libpysal.weights import Queen
+import matplotlib.pyplot as plt
+from esda import Moran
+from libpysal.weights import DistanceBand
+# Load LSOA boundaries
+
 
 weights = {
     'b. Income Deprivation Domain': 22.5,
@@ -310,6 +317,40 @@ def load_energy_all_dwellings(path: str) -> pd.DataFrame:
 
     return energy
 
+def add_spatial_lag(df, adj_dict, value_col='Burglary Count'):
+    print("Adding spatial lag feature...")
+
+    # Ensure data is sorted
+    df = df.sort_values(by=['LSOA code', 'Month'])
+    
+    # Create lag dataframe
+    lagged_df = df[['LSOA code', 'Month', value_col]].copy()
+    lagged_df[value_col] = lagged_df.groupby('LSOA code')[value_col].shift(1)
+
+    # Set index for fast lookup
+    lagged_df.set_index(['LSOA code', 'Month'], inplace=True)
+
+    spatial_lags = []
+
+    for idx, row in df.iterrows():
+        lsoa = row['LSOA code']
+        month = row['Month']
+
+        neighbors = adj_dict.get(lsoa, [])
+        neighbor_vals = []
+        for neighbor in neighbors:
+            try:
+                val = lagged_df.loc[(neighbor, month)][value_col]
+                neighbor_vals.append(val)
+            except KeyError:
+                continue
+
+        # Mean of neighbor values (if any), else np.nan
+        spatial_lags.append(np.mean(neighbor_vals) if neighbor_vals else np.nan)
+
+    df[f'{value_col}_SpatialLag1'] = spatial_lags
+    df[f'{value_col}_SpatialLag1'] = df[f'{value_col}_SpatialLag1'].fillna(0)  # or use median
+    return df
 
 def compute_lag_features(df: pd.DataFrame, lags=(1, 2)) -> pd.DataFrame:
     print("Computing lags")
@@ -378,6 +419,7 @@ def compute_custom_score(df, weights):
     return weighted_score / sum(weights.values())
 
 
+
 def preprocess_data(
         burglary_path: str,
         imd_path: str,
@@ -431,6 +473,18 @@ def preprocess_data(
     model_df = compute_lag_features(model_df)
     model_df = compute_custom_deprivation_score(model_df)
     model_df = add_moving_averages(model_df, target_col='Burglary Count', windows=[3, 6])
+    gdf = gpd.read_file("boundaries/LSOA_2011_London_gen_MHW.shp")
+    gdf = gdf.to_crs(epsg=27700)
+    w_dist = DistanceBand.from_dataframe(gdf, threshold=2000, silence_warnings=True)
+    adj_dict = w_dist.neighbors
+    # Number of neighbors for a few LSOAs
+    for lsoa in list(w_dist.neighbors.keys())[:5]:
+       print(f"{lsoa}: {len(w_dist.neighbors[lsoa])} neighbors")
+
+
+    # Add spatial lag based on neighbors' previous month's burglary count
+    model_df = add_spatial_lag(model_df, adj_dict, value_col='Burglary Count')
 
     
     return model_df
+
