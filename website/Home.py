@@ -1,38 +1,38 @@
 import streamlit as st
 
-st.set_page_config(page_title="London Burglary Predictor", layout="centered")
-st.title("🔐 London Burglary Predictor")
+# Page setup
+st.set_page_config(page_title="London Burglary Predictor", layout="centered", page_icon="🔐")
 
-st.markdown("""
-Welcome to the **London Burglary Risk Prediction Tool**, a data-driven platform designed to forecast the likelihood of residential burglary across London neighbourhoods.
-
----
-
-### Why Use This Tool?
-
-- **For Citizens:** Understand your area's burglary risk and take informed safety measures.
-- **For Police:** Help allocate patrol resources efficiently based on predicted burglary hotspots.
-- **For Policymakers:** Gain insights to support targeted crime reduction strategies.
-
----
-
-Use the sidebar to navigate through different pages for interactive tools, police insights, ethics considerations, and safety recommendations.
-
----
-
-Stay informed, stay safe!
-""")
+# Header
+st.title("🔐 London Burglary Risk Predictor")
+st.subheader("Estimate your LSOA’s burglary risk using data and machine learning.")
 
 st.markdown("---")
 
-st.markdown("**Enter your LSOA code**")
-# Input field for LSOA
-lsoa_input = st.text_input(label = "Your LSOA code is a 9 digit sequence (eg. E01000001):", placeholder = "Type your LSOA here...", max_chars = 9)
+# Section: Who is this for and What does it do 
+col1, col2 = st.columns(2)
 
-# Just a check to show what the user typed (can remove this if we wish to)
-if lsoa_input:
-    st.success(f"You Entered: {lsoa_input}")
+with col1:
+    st.markdown("### 👥 Who is this for?")
+    st.write("""
+    - **Citizens**: Check your local burglary risk and get safety suggestions.
+    - **Police**: Allocate resources based on data-driven risk prediction.
+    """)
+
+with col2:
+    st.markdown("### 📊 What does this tool do?")
+    st.write("""
+    - Uses a machine learning model trained on London LSOA residential burglary data.
+    - Predicts burglary risk based on your local area and demographics.
+    - Offers advice and insights if your risk is above a certain threshold.
+    """)
+
 
 st.markdown("---")
-st.caption("Developed by the London Crime Data Analytics Team")
+
+# Navigation info
+st.markdown("ℹ️ Navigate using the sidebar to access calculator, insights, model information and transparency, and safety advice.")
+
+# Footer
+st.caption("Developed for 4CBLW00-20 - Group 9")
 

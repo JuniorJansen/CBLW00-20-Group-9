@@ -1,3 +1,99 @@
 import streamlit as st
 
-st.title("🏠 Ethics and Information")
+st.set_page_config(page_title="Ethics & Model Info", layout="centered")
+st.title("🔍 Ethics & Model Transparency")
+
+st.markdown("""
+We believe in transparency, fairness, and responsible AI. This page explains how our residential burglary risk predictions are made, what data we use, why we use it, and the ethical considerations we kept in mind while building our approach.
+""")
+
+st.markdown("---")
+
+# IMD Scores Explanation
+with st.expander("📊 What Are IMD Scores?"):
+    st.markdown("""
+The **Index of Multiple Deprivation (IMD)** is the UK government’s official measure of relative deprivation across neighborhoods (LSOAs).  
+It combines **7 domains of deprivation**:
+- Income Deprivation
+- Employment Deprivation
+- Education, Skills and Training
+- Health Deprivation and Disability
+- Crime
+- Barriers to Housing and Services
+- Living environment
+
+Each area is ranked from **1 (most deprived)** to **32,844 (least deprived)**.
+
+We use IMD scores to help identify structurally vulnerable communities that may benefit most from crime prevention efforts.
+
+[Read more on the official UK Gov website](https://www.gov.uk/guidance/english-indices-of-deprivation-2019-mapping-resources#indices-of-deprivation-2019-explorer-postcode-mapper)
+""")
+
+# Custom IMD Features
+with st.expander("🧩 Our Custom Deprivation Index"):
+    st.markdown("""
+To capture burglary risk more accurately, we developed a **custom deprivation index** using additional factors inspired by academic literature and our own analysis. We deemed these ..
+
+                
+## Digital Exclusion
+- **Effect on Burglaries**: Reduced online access lowers reporting and awareness.
+- **Takes into account per LSOA**:
+    - Internet Access Quality
+    - Digital Literacy Rates
+    - Device Access per Household
+
+
+## Climate Vulnerability and Energy Poverty
+- **Effect on Burglaries**: Poor building conditions make homes easier targets.
+- **Takes into account per LSOA**:
+    - Households in Engery Poverty (cannot affor heating/cooling)
+    - Local Energy Efficiency (EPC ratings of buildings)
+                
+## Transport Accessibility
+- **Effect on Burglaries**: High access = easier entry/escape for burglars  || Low access = fewer witnesses, higher success rate
+- **Takes into account per LSOA**:
+    - blah
+
+## Age Demographics
+- **Effect on Burglaries**: Young adult–dominated areas may face higher risk.
+
+These were used alongside IMD data to enhance predictive performance and maintain relevance for modern policing.
+""")
+
+# Model Explanation
+with st.expander("🤖 How Our Model Works"):
+    st.markdown("""
+We trained a **Random Forest Classifier** on monthly burglary data at the LSOA level, enhanced with our custom deprivation index databases.
+
+### Why Random Forest?
+- Handles complex interactions between variables
+- Resistant to overfitting
+- Provides interpretable feature importance scores
+
+We also tested:
+- Linear Regression  
+- Ridge & Lasso (regularization)  
+- Logistic Regression
+
+But Random Forest offered the best trade-off between accuracy and interpretability.
+""")
+
+# Privacy & Ethical Considerations
+with st.expander("🔐 Privacy and Ethical Considerations"):
+    st.markdown("""
+Ethics and fairness are core to our project:
+
+### ✅ No Personal Data Used
+- All predictions are made at the **neighborhood (LSOA)** level.
+
+### ✅ Transparency
+- This page explains our full methodology.
+- Users can explore how each factor contributes to their risk score.
+
+### ✅ Fairness
+- We acknowledge that IMD scores and area-based risk models can unintentionally stigmatize.
+- Therefore, we avoid ranking individuals and focus only on **local risk awareness**.
+
+""")
+
+
