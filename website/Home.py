@@ -2,6 +2,16 @@ import streamlit as st
 
 # Page setup
 st.set_page_config(page_title="London Burglary Predictor", layout="centered", page_icon="🔐")
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color:#eafafa;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # Header
 st.title("🔐 London Burglary Risk Predictor")

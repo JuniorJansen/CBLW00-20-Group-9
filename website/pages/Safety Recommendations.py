@@ -1,6 +1,20 @@
 import streamlit as st
 
+
+# MUST be the first Streamlit command
 st.set_page_config(page_title="Safety Recommendations", layout="centered")
+
+# Background styling
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #eafafa;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 st.title("🛡️ Safety Recommendations")
 st.markdown("Protect yourself and your community with these strategies.")

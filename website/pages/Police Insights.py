@@ -1,6 +1,19 @@
 import streamlit as st
 
+# ✅ MUST be first Streamlit command
 st.set_page_config(page_title="Police Insights", layout="centered")
+
+# 🔧 Background styling
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #eafafa;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # Password that police has access to
 PASSWORD = "police123"
@@ -20,12 +33,11 @@ if not st.session_state.auth_ok:
             if password == PASSWORD:
                 st.session_state.auth_ok = True
                 st.success("✅ Access granted! You may now view police insights.")
-                st.rerun()  # Refresh the app to show content
+                st.rerun()
             else:
                 st.error("❌ Incorrect password.")
-    st.stop()  # Prevent the rest of the page from loading
+    st.stop()
 else:
-    # ✅ Protected content
     st.title("🚓 Police Insights")
     st.write("Welcome! Here are your restricted insights:")
     # Add your sensitive data, graphs, or analysis here
