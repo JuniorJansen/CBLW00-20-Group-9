@@ -51,7 +51,7 @@ if st.button("Predict Risk"):
             predicted_prob = matched_row.iloc[0]['Burglary_Probability']
             
             # Convert probability to percentage (if not already)
-            st.metric(label="🔐 Burglary Risk Probability", value=f"{predicted_prob:.2%}")
+            st.metric(label="🔐 Burglary Risk Probability in your LSOA in the next month", value=f"{predicted_prob:.2%}")
             st.progress(float(predicted_prob))
 
             # Risk level indicator

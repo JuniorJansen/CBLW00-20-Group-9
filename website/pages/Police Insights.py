@@ -6,9 +6,17 @@ from streamlit_folium import st_folium
 import numpy as np
 from shapely.geometry import Point
 
-# ✅ MUST be first Streamlit command
 st.set_page_config(page_title="Police Insights", layout="centered")
-
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #eafafa;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 # Password that police has access to
 PASSWORD = "police123"
