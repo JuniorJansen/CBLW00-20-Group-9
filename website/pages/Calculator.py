@@ -33,7 +33,7 @@ st.title("Burglary Risk Calculator")
 # User inputs
 age = st.number_input("Enter Age", min_value=0, max_value=120, value=30)
 
-postcode = st.text_input("Enter Postcode (e.g., EC2V 7DY)").strip()
+postcode = st.text_input("Enter Postcode (e.g. EC2V 7DY, RM9 5PB)").strip()
 
 if st.button("Predict Risk"):
 
