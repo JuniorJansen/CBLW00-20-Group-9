@@ -102,7 +102,7 @@ for i in range(0, len(all_files), chunk_size):
     if batch_burglary_data:
         batch_df = pd.concat(batch_burglary_data, ignore_index=True)
         # Append to the output file
-        batch_df.to_csv("data/metropolitan_police_data.csv", mode='a',
+        batch_df.to_csv("metropolitan_police_data.csv", mode='a',
                         header=not os.path.getsize("metropolitan_police_data.csv"), index=False)
         print(f"Added {len(batch_df)} Metropolitan Police burglary records to output file")
 
