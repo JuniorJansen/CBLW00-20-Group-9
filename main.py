@@ -16,17 +16,17 @@ from sklearn.impute import SimpleImputer
 import geopandas as gpd
 from esda.moran import Moran
 from libpysal.weights import Queen
+from libpysal.weights import KNN
 weights = {
     'b. Income Deprivation Domain': 23.82,
     'c. Employment Deprivation Domain': 23.82,
     'e. Health Deprivation and Disability Domain': 7.15,
     'd. Education, Skills and Training Domain': 7.15,
-
     'g. Barriers to Housing and Services Domain': 5.91,
     'h. Living Environment Deprivation Domain': 5.91,
     'Digital Propensity Score_rev': 7.15,
     'Energy_All_rev': 5.91,
-    'PTAL_rev': 5.91,
+    'AvPTAI2015_rev': 5.91,
     'Mean Age': 7.15
 }
 
@@ -37,12 +37,13 @@ def train_eval_models(df, save_models=True):
     months = df['Month'].sort_values().unique()
     cutoff = months[int(len(months) * 0.8) - 1]
     train = df[df['Month'] <= cutoff].copy()
+
     test = df[df['Month'] > cutoff].copy()
     print(f"Train rows: {train.shape[0]}, Test rows: {test.shape[0]}")
     # Ensure all necessary columns are present and fill NaNs
 # Reverse feature transformations (apply to both train and test)
     for df_split in [train, test]:
-       df_split['PTAL_rev'] = df_split['PTAL'].max() - df_split['PTAL']
+       df_split['AvPTAI2015_rev'] = df_split['AvPTAI2015'].max() - df_split['AvPTAI2015']
        df_split['Energy_All_rev'] = df_split['Energy_All'].max() - df_split['Energy_All']
        df_split['Digital Propensity Score_rev'] = df_split['Digital Propensity Score'].max() - df_split['Digital Propensity Score']
 
@@ -63,20 +64,18 @@ def train_eval_models(df, save_models=True):
     # Prepare features and targets
     exclude = ['LSOA code', 'Month', 'Burglary Count', 'Year', 'IMD Score',
                "Male", "Female", "Mean Male Age", "Mean Female Age", "Population", 
-            #    "b. Income Deprivation Domain", "c. Employment Deprivation Domain", "d. Education, Skills and Training Domain", 
-            #    "e. Health Deprivation and Disability Domain", 
+                #"b. Income Deprivation Domain", "c. Employment Deprivation Domain", "d. Education, Skills and Training Domain", 
+                #"e. Health Deprivation and Disability Domain", 
             "f. Crime Domain", 
-            # "g. Barriers to Housing and Services Domain", 
-            #    "h. Living Environment Deprivation Domain", 
+             #"g. Barriers to Housing and Services Domain", "h. Living Environment Deprivation Domain", 
                 'Digital Propensity Score', 
-                'Energy_All', 
+                'Energy_All', 'hotspot',
                 #'Mean Age', 
-            #'Burglary Count_MA3', 'Burglary Count_MA6',
-               'Custom_IMD_Score', 
+            #'Burglary Count_MA3', 'Burglary Count_MA6', 
                'i. Income Deprivation Affecting Children Index (IDACI)', 'j. Income Deprivation Affecting Older People Index (IDAOPI)', 'Male/Female Ratio',
-                'AvPTAI2015',
-                'PTAL', 'Lag1', 'Lag2', 
-               'Custom Deprivation Score']
+                #'AvPTAI2015_rev', 'Digital Propensity Score_rev', 'Energy_All_rev', 'Burglary Count_SpatailLag1',
+                'PTAL', 'Lag1', 'Lag2', 'AvPTAI2015', 'GIZ'
+               ]
     features = [c for c in train.columns if c not in exclude]
   
     X_train, X_test = train[features], test[features]
@@ -106,6 +105,11 @@ def train_eval_models(df, save_models=True):
     print(f" RMSE: {rmse:.2f}")
     print(f" MAE:  {mae:.2f}")
     print(f" R²:   {r2:.3f}")
+
+    if save_models:
+        from joblib import dump
+        dump(reg, 'models/burglary_regressor.joblib')
+        print("Saved improved regression model to models/burglary_regressor.joblib")
 
 
     # CLASSIFICATION MODEL
@@ -149,7 +153,7 @@ def train_eval_models(df, save_models=True):
 
     if save_models:
         from joblib import dump
-        dump(clf, 'models/burglary_classifier_improved.joblib')
+        dump(clf, 'models/burglary_classifier.joblib')
         dump(selected_features, 'models/selected_features.joblib')
         print("Saved improved classification model and feature list")
 
@@ -240,7 +244,115 @@ def visualize_results(reg, clf, features, selected_features, X_test, y_test_r, y
     plt.savefig('visualizations/confusion_matrix.png', dpi=300)
 
     print("\nAll visualizations saved to 'visualizations' directory")
+def visualize_hotspot_map(df, save_path='visualizations/hotspot_map.png'):
+    print("Creating hotspot map...")
 
+    # Load London LSOA shapefile or GeoJSON (replace with your actual path if different)
+    shapefile_path = 'boundaries/LSOA_2011_London_gen_MHW.shp'
+    gdf_london = gpd.read_file(shapefile_path)
+
+    # Ensure hotspot info is in the DataFrame
+    if 'hotspot' not in df.columns:
+        print("Hotspot data not found in dataframe.")
+        return
+
+    # Get latest month (for static map)
+    latest_month = df['Month'].max()
+    df_latest = df[df['Month'] == latest_month]
+
+    # Merge hotspot data with geometry
+    merged = gdf_london.merge(df_latest[['LSOA code', 'hotspot']], left_on='LSOA11CD', right_on='LSOA code', how='left')
+
+    # Plot
+    plt.figure(figsize=(12, 10))
+    merged.plot(column='hotspot', cmap='coolwarm', edgecolor='grey', legend=True, missing_kwds={"color": "lightgrey"})
+    plt.title(f'Hotspot Map – {latest_month}', fontsize=14)
+    plt.axis('off')
+    plt.tight_layout()
+    os.makedirs('visualizations', exist_ok=True)
+    plt.savefig(save_path, dpi=300)
+    print(f"Hotspot map saved to {save_path}")
+
+# def calculate_global_moran(df, shapefile_path='boundaries/LSOA_2011_London_gen_MHW.shp', value_col='Burglary Count'):
+#     import geopandas as gpd
+#     from libpysal.weights import Queen
+#     from esda.moran import Moran
+    
+#     print("Calculating Global Moran's I...")
+
+#     gdf = gpd.read_file(shapefile_path)
+
+#     # Merge on LSOA code
+#     merged = gdf.merge(df[[ 'LSOA code', value_col]], left_on='LSOA11CD', right_on='LSOA code', how='left')
+
+#     # Drop rows with missing value_col for Moran calculation
+#     merged_clean = merged.dropna(subset=[value_col])
+
+#     # Construct spatial weights matrix
+#     knn_weights = KNN.from_dataframe(merged_clean, k=12)  # k nearest neighbors
+#     knn_weights.transform = 'r'  # row-standardize weights
+
+#     moran_knn = Moran(merged_clean[value_col], knn_weights)
+
+#     print(f"KNN Global Moran's I: {moran_knn.I:.4f}, p-value: {moran_knn.p_norm:.4f}")
+
+#     print(f"Global Moran's I: {moran_knn.I:.4f}")
+#     print(f"Expected I (random): {moran_knn.EI:.4f}")
+#     print(f"Variance of I: {moran_knn.VI_norm:.4f}")
+#     print(f"Z-score: {moran_knn.z_norm:.4f}")
+#     print(f"P-value: {moran_knn.p_norm:.4f}")
+
+#     return moran_knn
+
+# def visualize_hotspot_map(df, save_path='visualizations/hotspot_map.png'):
+#     print("Creating hotspot and LISA maps...")
+
+#     import geopandas as gpd
+#     from esda.moran import Moran_Local
+#     from libpysal.weights import Queen
+
+#     # Load LSOA shapefile
+#     shapefile_path = 'boundaries/LSOA_2011_London_gen_MHW.shp'
+#     gdf_london = gpd.read_file(shapefile_path)
+
+#     # Get latest month
+#     latest_month = df['Month'].max()
+#     df_latest = df[df['Month'] == latest_month]
+
+#     # Merge with spatial GeoDataFrame
+#     merged = gdf_london.merge(df_latest[['LSOA code', 'hotspot', 'Burglary Count']],
+#                               left_on='LSOA11CD', right_on='LSOA code', how='left')
+
+#     # Hotspot Map
+#     plt.figure(figsize=(12, 10))
+#     merged.plot(column='hotspot', cmap='coolwarm', edgecolor='grey', legend=True,
+#                 missing_kwds={"color": "lightgrey"})
+#     plt.title(f'Hotspot Map – {latest_month}', fontsize=14)
+#     plt.axis('off')
+#     plt.tight_layout()
+#     os.makedirs('visualizations', exist_ok=True)
+#     plt.savefig(save_path, dpi=300)
+#     print(f"Hotspot map saved to {save_path}")
+
+#     print("Generating LISA cluster map...")
+
+#     lisa_df = merged.dropna(subset=['Burglary Count']).copy()
+#     w = Queen.from_dataframe(lisa_df)
+#     w.transform = 'r'
+
+#     m_local = Moran_Local(lisa_df['Burglary Count'], w)
+#     lisa_df['LISA_cluster'] = m_local.q
+#     cluster_labels = {1: 'High-High', 2: 'Low-Low', 3: 'High-Low', 4: 'Low-High'}
+#     lisa_df['Cluster_Label'] = lisa_df['LISA_cluster'].map(cluster_labels)
+
+#     plt.figure(figsize=(12, 10))
+#     lisa_df.plot(column='Cluster_Label', cmap='Set1', edgecolor='grey', legend=True)
+#     plt.title(f'LISA Cluster Map – {latest_month}', fontsize=14)
+#     plt.axis('off')
+#     plt.tight_layout()
+#     lisa_path = 'visualizations/lisa_cluster_map.png'
+#     plt.savefig(lisa_path, dpi=300)
+#     print(f"LISA cluster map saved to {lisa_path}")
 
 def main():
     SAVE_MODELS = True
@@ -271,6 +383,10 @@ def main():
     except Exception as e:
         print(f"[ERROR] Preprocessing failed at preprocess_data: {e}")
         sys.exit(1)
+    # try:
+    #     moran_knn = calculate_global_moran(df)
+    # except Exception as e:
+    #     print(f"WARNING: Error during Global Moran's I calculation: {e}")
     print(df.sample(5).to_string())
     reg, clf, features, selected_features, X_test, y_test_r, y_test_c, preds_r, preds_c, preds_proba = \
         train_eval_models(df, save_models=SAVE_MODELS)
@@ -283,6 +399,13 @@ def main():
        )
     except Exception as e:
        print(f"WARNING: Error during visualization: {e}")
+    try:
+       visualize_hotspot_map(df)
+    except Exception as e:
+       print(f"WARNING: Error during hotspot map visualization: {e}")
+    # visualize_hotspot_map(df)
+
+
 
     print("Analysis complete")
 

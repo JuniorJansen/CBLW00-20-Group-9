@@ -6,6 +6,8 @@ from libpysal.weights import Queen
 import matplotlib.pyplot as plt
 from esda import Moran
 from libpysal.weights import DistanceBand
+from libpysal.weights import KNN
+from esda.getisord import G_Local
 # Load LSOA boundaries
 
 
@@ -370,7 +372,7 @@ def add_moving_averages(df, target_col='Burglary Count', windows=[3, 6]):
 
     for window in windows:
         col_name = f'{target_col}_MA{window}'
-        df[col_name] = df.groupby('LSOA code')[target_col].transform(lambda x: x.rolling(window=window, min_periods=1).mean())
+        df[col_name] = df.groupby('LSOA code')[target_col].transform(lambda x: x.ewm(span=window, adjust=False).mean())
     
     return df
 
@@ -398,7 +400,9 @@ def preprocess_data(
     # Load London LSOAs and filter burglaries
     london_lsoas = load_london_lsoas(london_lsoa_path)
     df = load_burglary_data(burglary_path)
+    
     # put code here :)
+
     df = df[df['LSOA code'].isin(london_lsoas)]
 
     # Build the full LSOA×Month grid
@@ -432,15 +436,33 @@ def preprocess_data(
     model_df = add_moving_averages(model_df, target_col='Burglary Count', windows=[3, 6])
     gdf = gpd.read_file("boundaries/LSOA_2011_London_gen_MHW.shp")
     gdf = gdf.to_crs(epsg=27700)
-    w_dist = DistanceBand.from_dataframe(gdf, threshold=2000, silence_warnings=True)
-    adj_dict = w_dist.neighbors
+    w_knn = KNN.from_dataframe(gdf, k=8)
+    adj_dict = w_knn.neighbors
     # Number of neighbors for a few LSOAs
-    for lsoa in list(w_dist.neighbors.keys())[:5]:
-       print(f"{lsoa}: {len(w_dist.neighbors[lsoa])} neighbors")
+    for lsoa in list(w_knn.neighbors.keys())[:5]:
+       print(f"{lsoa}: {len(w_knn.neighbors[lsoa])} neighbors")
 
 
     # Add spatial lag based on neighbors' previous month's burglary count
     model_df = add_spatial_lag(model_df, adj_dict, value_col='Burglary Count')
+    # --- Hotspot detection ---
+    # Compute total burglary count per LSOA
+    # total_burg = model_df.groupby('LSOA code')['Burglary Count'].sum().reset_index()
+    # gdf = gdf.merge(total_burg, left_on='LSOA11CD', right_on='LSOA code', how='left')
+    # gdf['Burglary Count'] = gdf['Burglary Count'].fillna(0)
+
+    # Gi* statistic
+    # gi_star = G_Local(gdf['Burglary Count'].values, w_knn, transform='R', star=True)
+    # gdf['GiZ'] = gi_star.Zs
+    # gdf['GiP'] = gi_star.p_sim
+    # gdf['hotspot'] = 'not significant'
+    # gdf.loc[(gdf['GiZ'] > 1.96) & (gdf['GiP'] < 0.05), 'hotspot'] = 'hotspot'
+    # gdf.loc[(gdf['GiZ'] < -1.96) & (gdf['GiP'] < 0.05), 'hotspot'] = 'coldspot'
+
+    # Add back to model_df
+    # model_df = model_df.merge(gdf[['LSOA11CD', 'GiZ', 'GiP', 'hotspot']],
+    #                           left_on='LSOA code', right_on='LSOA11CD', how='left')
+    # model_df.drop(columns=['LSOA11CD'], inplace=True)
 
     
     return model_df
