@@ -37,6 +37,7 @@ else:
     st.write("Welcome! Here are your restricted insights:")
 
 # --- Load predictions CSV ---
+colour ="Risk_Level"
 @st.cache_data
 def load_predictions():
     try:
@@ -154,36 +155,82 @@ def load_ward_boundaries():
 
 
 @st.cache_data
+@st.cache_data
 def load_lsoa_ward_mapping():
-    """Load LSOA to Ward mapping"""
+    """Load LSOA to Ward mapping with better error handling"""
     try:
         map_excel = "../boundaries/LSOA11_WD21_LAD21_EW_LU_V2.xlsx"
-        df_map = pd.read_excel(map_excel, dtype=str)
 
+        # Check if file exists first
+        import os
+        if not os.path.exists(map_excel):
+            st.error(f"Mapping file not found: {map_excel}")
+            return None
+
+        # Try different approaches to read the Excel file
+        try:
+            # First try: Read with openpyxl engine (most common)
+            df_map = pd.read_excel(map_excel, engine='openpyxl', dtype=str)
+        except Exception as e1:
+            try:
+                # Second try: Read without specifying engine
+                df_map = pd.read_excel(map_excel, dtype=str)
+            except Exception as e2:
+                try:
+                    # Third try: Read specific sheet (sometimes needed)
+                    df_map = pd.read_excel(map_excel, sheet_name=0, dtype=str)
+                except Exception as e3:
+                    try:
+                        # Fourth try: Read with xlrd engine (for older Excel files)
+                        df_map = pd.read_excel(map_excel, engine='xlrd', dtype=str)
+                    except Exception as e4:
+                        st.error(f"Failed to read Excel file with multiple methods:")
+                        st.error(f"Method 1 (openpyxl): {e1}")
+                        st.error(f"Method 2 (default): {e2}")
+                        st.error(f"Method 3 (sheet_name=0): {e3}")
+                        st.error(f"Method 4 (xlrd): {e4}")
+                        return None
+
+
+        # Find LSOA code column
         lsoa_col = None
-        for col in ['LSOA11CD', 'lsoa11cd', 'LSOA_CODE']:
+        for col in ['LSOA11CD', 'lsoa11cd', 'LSOA_CODE', 'LSOA11_CODE']:
             if col in df_map.columns:
                 lsoa_col = col
                 break
 
         if lsoa_col is None:
-            st.error("Cannot find LSOA code column in mapping file")
+            st.error(f"Cannot find LSOA code column in mapping file. Available columns: {list(df_map.columns)}")
             return None
 
         rename_dict = {lsoa_col: 'LSOA code'}
 
-        ward_code_cols = ['WD21CD', 'wd21cd', 'WARD_CODE']
-        ward_name_cols = ['WD21NM', 'wd21nm', 'WARD_NAME']
-
+        # Find ward code column
+        ward_code_col = None
+        ward_code_cols = ['WD21CD', 'wd21cd', 'WARD_CODE', 'WD21_CODE']
         for col in ward_code_cols:
             if col in df_map.columns:
+                ward_code_col = col
                 rename_dict[col] = 'Ward code'
                 break
 
+        # Find ward name column
+        ward_name_col = None
+        ward_name_cols = ['WD21NM']
         for col in ward_name_cols:
             if col in df_map.columns:
+                ward_name_col = col
                 rename_dict[col] = 'Ward name'
                 break
+
+        # Check if we found the required columns
+        if ward_code_col is None:
+            st.error(f"Cannot find Ward code column. Available columns: {list(df_map.columns)}")
+            return None
+
+        if ward_name_col is None:
+            st.error(f"Cannot find Ward name column. Available columns: {list(df_map.columns)}")
+            return None
 
         df_map = df_map.rename(columns=rename_dict)
 
@@ -191,13 +238,24 @@ def load_lsoa_ward_mapping():
         available_cols = [col for col in required_cols if col in df_map.columns]
 
         if len(available_cols) != len(required_cols):
-            st.error(f"Ward mapping missing columns. Available: {available_cols}")
+            st.error(f"Ward mapping missing columns. Required: {required_cols}, Available: {available_cols}")
             return None
 
-        return df_map[required_cols].dropna()
+        # Clean the data
+        result_df = df_map[required_cols].dropna()
+
+        # Remove any rows with empty strings
+        result_df = result_df[
+            (result_df['LSOA code'].str.strip() != '') &
+            (result_df['Ward code'].str.strip() != '') &
+            (result_df['Ward name'].str.strip() != '')
+            ]
+
+        return result_df
 
     except Exception as e:
         st.error(f"Error reading mapping: {e}")
+        st.error(f"Error type: {type(e).__name__}")
         return None
 
 if 'clicked_ward' not in st.session_state:
