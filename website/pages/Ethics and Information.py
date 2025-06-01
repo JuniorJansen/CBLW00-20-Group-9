@@ -82,7 +82,7 @@ valuable indicators of deprivation within London. The new factors include:
     - The level of service at the public transport access points - eg. average waiting time
 
 ## Age Demographics
-- **Effect on Burglaries**: Young adult–dominated areas may face higher risk.
+- **Effect on Burglaries**: Young adult–dominated areas may face higher risk based on literature read.
 
 These were used alongside IMD data to enhance predictive performance and maintain relevance for modern policing.
                 
@@ -93,6 +93,7 @@ If you want to learn more about these factors and the data used:
 - [Transport Accessibility](https://data.london.gov.uk/dataset/public-transport-accessibility-levels#:~:text=The%20method%20is%20essentially%20a,excellent%20access%20to%20public%20transport.)
 - [Climate Vulnerability and Energy Poverty](https://www.ons.gov.uk/peoplepopulationandcommunity/housing/datasets/medianenergyefficiencyscoreenglandandwales)
 - [Digital Exclusion](https://www.ons.gov.uk/peoplepopulationandcommunity/householdcharacteristics/homeinternetandsocialmediausage/articles/digitalpropensityindexforenglandandwaleslsoas/census2021)
+- [Age](https://www.ons.gov.uk/peoplepopulationandcommunity/crimeandjustice/articles/overviewofburglaryandotherhouseholdtheft/englandandwales?utm_source=chatgpt.com)
 """)
 
 # Model Explanation
