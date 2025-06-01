@@ -54,7 +54,9 @@ with st.expander("📊 What Are IMD Scores?"):
 # Custom IMD Features
 with st.expander("🧩 Our Custom Deprivation Index"):
     st.markdown("""
-To capture burglary risk more accurately, we developed a **custom deprivation index** using additional factors inspired by academic literature and our own analysis. We deemed these ..
+To capture burglary risk more accurately, we developed a **custom deprivation index** using additional factors inspired by academic literature and our own analysis. 
+We deemed found these factors to be excluded from the orignal IMD analysis, but taking into account the rapid change of our society, we deemed them
+valuable indicators of deprivation within London. The new factors include:
 
                 
 ## Digital Exclusion
@@ -74,12 +76,23 @@ To capture burglary risk more accurately, we developed a **custom deprivation in
 ## Transport Accessibility
 - **Effect on Burglaries**: High access = easier entry/escape for burglars  || Low access = fewer witnesses, higher success rate
 - **Takes into account per LSOA**:
-    - blah
+    - Walking time from the point-of interest to the public transport access points
+    - The reliability of the service modes available
+    - The number of services available within the catchment
+    - The level of service at the public transport access points - eg. average waiting time
 
 ## Age Demographics
 - **Effect on Burglaries**: Young adult–dominated areas may face higher risk.
 
 These were used alongside IMD data to enhance predictive performance and maintain relevance for modern policing.
+                
+Additionally, we were thinking about adding Mental Health and Social Isolation as a factor to our custom deprivation index. However, we found the datasets
+were more relevant for the offender (burglar) rather than the victim of the crime. Thus, we decided to exclude it as a factor as out goal was to predict who the victims would be.
+                
+If you want to learn more about these factors and the data used:
+- [Transport Accessibility](https://data.london.gov.uk/dataset/public-transport-accessibility-levels#:~:text=The%20method%20is%20essentially%20a,excellent%20access%20to%20public%20transport.)
+- [Climate Vulnerability and Energy Poverty](https://www.ons.gov.uk/peoplepopulationandcommunity/housing/datasets/medianenergyefficiencyscoreenglandandwales)
+- [Digital Exclusion](https://www.ons.gov.uk/peoplepopulationandcommunity/householdcharacteristics/homeinternetandsocialmediausage/articles/digitalpropensityindexforenglandandwaleslsoas/census2021)
 """)
 
 # Model Explanation
@@ -108,15 +121,15 @@ with st.expander("🔐 Privacy & Ethical Considerations"):
     ### ✅ Data Privacy
     - No personal or individual-level data is used.
     - Predictions are exclusively made at the neighborhood (LSOA) level.
-    - DO ANONYMISATION
+    - We have used the London's Police anonymisation procedure to ensure nobody's privacy is violated. The latitude and longitude locations of incidents reported always represent the approximate location of a crime — not the exact place that it happened
+    - [Read more about anonymisation here.](https://data.police.uk/about/#anonymisation)
 
     ### ✅ Transparency
-    - This page provides full visibility into our data sources and modeling techniques.
+    - This page provides full visibility into our data sources, databases and modeling techniques.
     - Users can explore how various factors influence local risk scores.
 
     ### ✅ Fairness & Accountability
-    - We acknowledge the potential for area-based models to inadvertently stigmatize communities.
-    - Our objective is **not to rank individuals**, but to support informed, equitable prevention strategies at the local level.
+    - We acknowledge the potential for area-based models to inadvertently stigmatize communities. However, our objective is **not to rank individuals**, but to support informed, equitable prevention strategies at the local level.
     """)
 
 
