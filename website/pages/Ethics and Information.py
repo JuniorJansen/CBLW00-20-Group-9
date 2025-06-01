@@ -20,22 +20,36 @@ st.markdown("---")
 # IMD Scores Explanation
 with st.expander("📊 What Are IMD Scores?"):
     st.markdown("""
-The **Index of Multiple Deprivation (IMD)** is the UK government’s official measure of relative deprivation across neighborhoods (LSOAs).  
-It combines **7 domains of deprivation**:
-- Income Deprivation
-- Employment Deprivation
-- Education, Skills and Training
-- Health Deprivation and Disability
-- Crime
-- Barriers to Housing and Services
-- Living environment
+    The **Index of Multiple Deprivation (IMD)** is the UK government's official measure of relative deprivation across small areas (LSOAs).
+    
+    It combines **seven domains**:
+    - **Income Deprivation**
+    - **Employment Deprivation**
+    - **Education, Skills and Training**
+    - **Health Deprivation and Disability**
+    - **Crime**
+    - **Barriers to Housing and Services**
+    - **Living Environment**
+    
+    Each area is ranked from **1 (most deprived)** to **32,844 (least deprived)**.  
+    We incorporate IMD data to help identify communities that may benefit most from enhanced burglary prevention efforts.
+    """)
 
-Each area is ranked from **1 (most deprived)** to **32,844 (least deprived)**.
+    with st.container():
+        st.image(
+            "C:/Users/20231105/OneDrive/YEAR2/Q4/CBL/IMD.png", 
+            caption="IMD Domains and Their Indicators", 
+            use_container_width=True
+        )
 
-We use IMD scores to help identify structurally vulnerable communities that may benefit most from crime prevention efforts.
+    st.markdown("""
+    **If you want to learn more about the IMDs:**
+    - [IMD Explorer](https://www.gov.uk/guidance/english-indices-of-deprivation-2019-mapping-resources#indices-of-deprivation-2019-explorer-postcode-mapper)  
+    - [Technical Report](https://assets.publishing.service.gov.uk/media/5d8b387740f0b609909b5908/IoD2019_Technical_Report.pdf)
+    """)
 
-[Read more on the official UK Gov website](https://www.gov.uk/guidance/english-indices-of-deprivation-2019-mapping-resources#indices-of-deprivation-2019-explorer-postcode-mapper)
-""")
+
+
 
 # Custom IMD Features
 with st.expander("🧩 Our Custom Deprivation Index"):
@@ -86,22 +100,23 @@ We also tested:
 But Random Forest offered the best trade-off between accuracy and interpretability.
 """)
 
-# Privacy & Ethical Considerations
-with st.expander("🔐 Privacy and Ethical Considerations"):
+# Privacy & Ethics
+with st.expander("🔐 Privacy & Ethical Considerations"):
     st.markdown("""
-Ethics and fairness are core to our project:
+    Ethical integrity and user privacy are foundational to our work.
 
-### ✅ No Personal Data Used
-- All predictions are made at the **neighborhood (LSOA)** level.
+    ### ✅ Data Privacy
+    - No personal or individual-level data is used.
+    - Predictions are exclusively made at the neighborhood (LSOA) level.
+    - DO ANONYMISATION
 
-### ✅ Transparency
-- This page explains our full methodology.
-- Users can explore how each factor contributes to their risk score.
+    ### ✅ Transparency
+    - This page provides full visibility into our data sources and modeling techniques.
+    - Users can explore how various factors influence local risk scores.
 
-### ✅ Fairness
-- We acknowledge that IMD scores and area-based risk models can unintentionally stigmatize.
-- Therefore, we avoid ranking individuals and focus only on **local risk awareness**.
-
-""")
+    ### ✅ Fairness & Accountability
+    - We acknowledge the potential for area-based models to inadvertently stigmatize communities.
+    - Our objective is **not to rank individuals**, but to support informed, equitable prevention strategies at the local level.
+    """)
 
 
