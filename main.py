@@ -8,6 +8,7 @@ from sklearn.metrics import (
     mean_squared_error, r2_score, mean_absolute_error,
     accuracy_score, classification_report, roc_auc_score, confusion_matrix
 )
+
 import seaborn as sns
 from preprocessing import preprocess_data
 import os
@@ -26,9 +27,10 @@ weights = {
     'h. Living Environment Deprivation Domain': 5.91,
     'Digital Propensity Score_rev': 7.15,
     'Energy_All_rev': 5.91,
-    'AvPTAI2015_rev': 5.91,
+    'AvPTAI2015': 5.91,
     'Mean Age': 7.15
 }
+from sklearn import tree
 
 
 def train_eval_models(df, save_models=True):
@@ -43,7 +45,7 @@ def train_eval_models(df, save_models=True):
     # Ensure all necessary columns are present and fill NaNs
 # Reverse feature transformations (apply to both train and test)
     for df_split in [train, test]:
-       df_split['AvPTAI2015_rev'] = df_split['AvPTAI2015'].max() - df_split['AvPTAI2015']
+       df_split['PTAL_rev'] = df_split['PTAL'].max() - df_split['PTAL']
        df_split['Energy_All_rev'] = df_split['Energy_All'].max() - df_split['Energy_All']
        df_split['Digital Propensity Score_rev'] = df_split['Digital Propensity Score'].max() - df_split['Digital Propensity Score']
 
@@ -64,20 +66,22 @@ def train_eval_models(df, save_models=True):
     # Prepare features and targets
     exclude = ['LSOA code', 'Month', 'Burglary Count', 'Year', 'IMD Score',
                "Male", "Female", "Mean Male Age", "Mean Female Age", "Population", 
-                #"b. Income Deprivation Domain", "c. Employment Deprivation Domain", "d. Education, Skills and Training Domain", 
-                #"e. Health Deprivation and Disability Domain", 
+            #    "b. Income Deprivation Domain", "c. Employment Deprivation Domain", "d. Education, Skills and Training Domain", 
+            #    "e. Health Deprivation and Disability Domain", 
             "f. Crime Domain", 
-             #"g. Barriers to Housing and Services Domain", "h. Living Environment Deprivation Domain", 
+            # "g. Barriers to Housing and Services Domain", 
+            #    "h. Living Environment Deprivation Domain", 
                 'Digital Propensity Score', 
-                'Energy_All', 'hotspot',
+                'Energy_All', 
                 #'Mean Age', 
-            #'Burglary Count_MA3', 'Burglary Count_MA6', 
+            #'Burglary Count_MA3', 'Burglary Count_MA6',
+               'Custom_IMD_Score', 
                'i. Income Deprivation Affecting Children Index (IDACI)', 'j. Income Deprivation Affecting Older People Index (IDAOPI)', 'Male/Female Ratio',
-                #'AvPTAI2015_rev', 'Digital Propensity Score_rev', 'Energy_All_rev', 'Burglary Count_SpatailLag1',
-                'PTAL', 'Lag1', 'Lag2', 'AvPTAI2015', 'GIZ'
+            #    #'AvPTAI2015_rev', 'Digital Propensity Score_rev', 'Energy_All_rev', 'Burglary Count_SpatailLag1',
+                'PTAL', 'Lag1', 'Lag2','AvPTAI2015', 'GIZ'
                ]
     features = [c for c in train.columns if c not in exclude]
-  
+
     X_train, X_test = train[features], test[features]
     y_train_r, y_test_r = train['Burglary Count'], test['Burglary Count']
     y_train_c, y_test_c = (y_train_r > 0).astype(int), (y_test_r > 0).astype(int)
@@ -128,7 +132,7 @@ def train_eval_models(df, save_models=True):
         n_estimators=200,  # Increased complexity
         max_depth=10,
         random_state=42,
-        class_weight='balanced'  # Handle potential class imbalance
+        class_weight='balanced'
     )
     clf.fit(X_train_selected, y_train_c)
 
@@ -153,6 +157,7 @@ def train_eval_models(df, save_models=True):
 
     if save_models:
         from joblib import dump
+        dump(clf, 'models/burglary_classifier.joblib')
         dump(clf, 'models/burglary_classifier.joblib')
         dump(selected_features, 'models/selected_features.joblib')
         print("Saved improved classification model and feature list")

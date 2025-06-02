@@ -3,9 +3,17 @@ import streamlit as st
 st.set_page_config(page_title="Ethics & Model Info", layout="centered")
 st.title("🔍 Ethics & Model Transparency")
 
-st.markdown("""
-We believe in transparency, fairness, and responsible AI. This page explains how our residential burglary risk predictions are made, what data we use, why we use it, and the ethical considerations we kept in mind while building our approach.
-""")
+st.markdown(
+    """
+    <style>
+    .stApp {
+        background-color: #eafafa;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 
 st.markdown("---")
 
