@@ -796,12 +796,12 @@ if mode == "Ward":
     # Determine the aggregation column we're using
     allocation_agg_col = 'Predicted_Count' if 'Predicted_Count' in ward_allocation_data.columns else 'Burglary_Probability'
 
-    # Create risk categories based on tertiles: Top 33.3% High, Middle 33.3% Medium, Bottom 33.3% Low
+    # Create risk categories based on tertiles: Top 10% High, Middle 40% Medium, Bottom 50% Low
     if len(ward_allocation_data) > 0:
         ward_allocation_data = ward_allocation_data.sort_values(by=allocation_agg_col, ascending=False).reset_index(drop=True)
         total_wards = len(ward_allocation_data)
-        high_cutoff = int(total_wards * 0.333)
-        medium_cutoff = int(total_wards * 0.666)
+        high_cutoff = int(total_wards * 0.1)
+        medium_cutoff = int(total_wards * 0.5)
 
         def assign_risk_category_fixed(index):
             if index < high_cutoff:
@@ -920,9 +920,9 @@ if mode == "Ward":
 
             **Risk Categories:**
             - Wards are sorted by predicted risk score
-            - Top 33% → High Risk  
-            - Middle 33% → Medium Risk  
-            - Bottom 33% → Low Risk  
+            - Top 10% → High Risk  
+            - Middle 40% → Medium Risk  
+            - Bottom 50% → Low Risk  
             """)
     else:
         st.error("No ward data available for allocation analysis")
