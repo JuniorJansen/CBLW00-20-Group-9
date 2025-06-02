@@ -28,19 +28,11 @@ weights = {
 
 def load_london_lsoas(path: str) -> pd.Series:
     """
-    Load London LSOA codes from CSV with columns 'lsoa_code' and 'lsoa_name'.
-    Filters out any LSOAs whose name contains 'City of London'.
-    Returns a Series of the remaining LSOA codes.
+    Load London LSOA codes from CSV with column 'lsoa_code'.
+    Returns a Series of LSOA codes.
     """
-    # make sure we also pull in the name column so we can filter by it
     df = pd.read_csv(path, usecols=['lsoa_code'], encoding='utf-8')
-
-    # drop any rows where the LSOA name mentions "City of London"
-    mask = ~df['lsoa_name'].str.contains('E01000001','E01000002','E01000003','E01000004', case=False, na=False)
-    df = df[mask]
-
     return df['lsoa_code']
-
 
 def load_burglary_data(path: str) -> pd.DataFrame:
     """
