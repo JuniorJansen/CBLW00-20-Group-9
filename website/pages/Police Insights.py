@@ -783,8 +783,6 @@ except Exception as e:
 # # NEW additions:
 # # ═══════════════════════════════════════════════════════════════════════════════
 # # POLICE ALLOCATION DASHBOARD - BASELINE SCHEME (30/60/100)
-# # Add this entire section to the end of your existing code
-# # ═══════════════════════════════════════════════════════════════════════════════
 
 
 # Only show Police Allocation Dashboard in Ward mode
