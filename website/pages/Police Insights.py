@@ -8,6 +8,8 @@ from shapely.geometry import Point
 import json
 import os
 from difflib import get_close_matches
+import plotly.express as px
+import plotly.graph_objects as go
 
 
 def get_explanation(col, value):
@@ -240,7 +242,7 @@ def load_lsoa_boundaries():
             gdf = gdf.to_crs(epsg=4326)
 
         # Simplify geometry for performance
-        gdf['geometry'] = gdf.geometry.simplify(tolerance=0.001, preserve_topology=True)
+        gdf['geometry'] = gdf.geometry.simplify(tolerance=0.0001, preserve_topology=True)
 
         # Rename LSOA code & name if needed
         rename_dict = {}
@@ -593,7 +595,7 @@ try:
         )
     ).add_to(m)
 
-    map_data = st_folium(m, width=700, height=650, returned_objects=["last_clicked"])
+    map_data = st_folium(m, width=700, height=700, returned_objects=["last_clicked"])
 
     clicked = map_data.get('last_clicked')
     if clicked:
@@ -777,3 +779,158 @@ try:
 
 except Exception as e:
     st.error(f"Error displaying data table: {e}")
+
+# # NEW additions:
+# # ═══════════════════════════════════════════════════════════════════════════════
+# # POLICE ALLOCATION DASHBOARD - BASELINE SCHEME (30/60/100)
+# # Add this entire section to the end of your existing code
+# # ═══════════════════════════════════════════════════════════════════════════════
+
+
+# Only show Police Allocation Dashboard in Ward mode
+if mode == "Ward":
+    st.markdown("---")
+    st.header("🚓 Risk-Based Allocation of Police Officers")
+
+    # Create a fresh copy of ward_agg for allocation calculations
+    ward_allocation_data = ward_agg.copy()
+
+    # Determine the aggregation column we're using
+    allocation_agg_col = 'Predicted_Count' if 'Predicted_Count' in ward_allocation_data.columns else 'Burglary_Probability'
+
+    # Create risk categories based on tertiles: Top 33.3% High, Middle 33.3% Medium, Bottom 33.3% Low
+    if len(ward_allocation_data) > 0:
+        ward_allocation_data = ward_allocation_data.sort_values(by=allocation_agg_col, ascending=False).reset_index(drop=True)
+        total_wards = len(ward_allocation_data)
+        high_cutoff = int(total_wards * 0.333)
+        medium_cutoff = int(total_wards * 0.666)
+
+        def assign_risk_category_fixed(index):
+            if index < high_cutoff:
+                return 'High'
+            elif index < medium_cutoff:
+                return 'Medium'
+            else:
+                return 'Low'
+
+        ward_allocation_data['Risk_Category'] = ward_allocation_data.index.map(assign_risk_category_fixed)
+
+        # Officer allocation scheme: Low = 30, Medium = 60, High = 100
+        allocation_scheme = {'Low': 30, 'Medium': 60, 'High': 100}
+        ward_allocation_data['Officers_Allocated'] = ward_allocation_data['Risk_Category'].map(allocation_scheme)
+
+        # Summary metrics
+        total_officers = ward_allocation_data['Officers_Allocated'].sum()
+        high_risk_wards = len(ward_allocation_data[ward_allocation_data['Risk_Category'] == 'High'])
+        medium_risk_wards = len(ward_allocation_data[ward_allocation_data['Risk_Category'] == 'Medium'])
+        low_risk_wards = len(ward_allocation_data[ward_allocation_data['Risk_Category'] == 'Low'])
+
+        # Display summary metrics
+        st.subheader("📊 Allocation Summary")
+        col1, col2, col3, col4, col5 = st.columns(5)
+
+        with col1:
+            st.metric("Total Officers", f"{total_officers:,}")
+        with col2:
+            st.metric("Total Wards", total_wards)
+        with col3:
+            st.metric("High Risk", f"{high_risk_wards} wards", f"{high_risk_wards/total_wards*100:.1f}%")
+        with col4:
+            st.metric("Medium Risk", f"{medium_risk_wards} wards", f"{medium_risk_wards/total_wards*100:.1f}%")
+        with col5:
+            st.metric("Low Risk", f"{low_risk_wards} wards", f"{low_risk_wards/total_wards*100:.1f}%")
+
+
+        # Top allocation wards
+        st.subheader("Highest Allocation Wards")
+
+        top_wards = ward_allocation_data.nlargest(15, 'Officers_Allocated')[
+            ['Ward name', 'Risk_Category', 'Officers_Allocated', allocation_agg_col]
+        ].reset_index(drop=True)
+
+        display_cols = {
+            'Ward name': 'Ward Name',
+            'Risk_Category': 'Risk Level',
+            'Officers_Allocated': 'Officers',
+            allocation_agg_col: 'Risk Score'
+        }
+        top_wards_display = top_wards.rename(columns=display_cols)
+
+        st.dataframe(top_wards_display, use_container_width=True, hide_index=True)
+
+
+        # Search for a specific ward
+        st.subheader("🔍 Search Ward Allocation")
+
+        # Get list of ward names for dropdown
+        ward_names = ward_allocation_data['Ward name'].sort_values().unique()
+        selected_ward = st.selectbox("Select a Ward", ward_names)
+
+        # Display allocation details for the selected ward
+        ward_info = ward_allocation_data[ward_allocation_data['Ward name'] == selected_ward]
+
+        if not ward_info.empty:
+            ward_details = ward_info.iloc[0]
+            st.markdown(f"""
+            **Ward Name:** {ward_details['Ward name']}  
+            **Risk Level:** {ward_details['Risk_Category']}  
+            **Officers Allocated:** {ward_details['Officers_Allocated']}  
+            **Risk Score:** {ward_details[allocation_agg_col]:.2f}
+            """)
+        else:
+            st.warning("Selected ward not found in the data.")
+
+
+
+        # Download allocation data
+        st.subheader("💾 Download Allocation Data")
+
+        download_data = ward_allocation_data[['Ward name', 'Ward code', 'Risk_Category', 'Officers_Allocated', allocation_agg_col]].copy()
+        download_data = download_data.rename(columns={
+            'Ward name': 'Ward_Name',
+            'Ward code': 'Ward_Code',
+            'Risk_Category': 'Risk_Level',
+            'Officers_Allocated': 'Officers_Allocated',
+            allocation_agg_col: 'Risk_Score'
+        })
+
+        csv_allocation = download_data.to_csv(index=False)
+
+        st.download_button(
+            label="📥 Download Ward Allocation Data (CSV)",
+            data=csv_allocation,
+            file_name=f"police_allocation_baseline_{selected_month}_{selected_year}.csv",
+            mime="text/csv"
+        )
+
+        # Implementation notes
+        with st.expander("ℹ️ Implementation Notes"):
+            st.markdown("""
+            **Baseline Tiered Strategy (30/60/100)**
+
+            This allocation strategy assigns officers based on ranked burglary risk:
+
+            - **High Risk Wards**: 100 officers each  
+            - **Medium Risk Wards**: 60 officers each  
+            - **Low Risk Wards**: 30 officers each  
+
+            **Key Features:**
+            - Simple and intuitive tiered structure
+            - Ties officer numbers directly to risk classification
+            - Promotes equitable distribution based on proportional threat
+            - Easier to plan and budget across known ward categories
+
+            **Risk Categories:**
+            - Wards are sorted by predicted risk score
+            - Top 33% → High Risk  
+            - Middle 33% → Medium Risk  
+            - Bottom 33% → Low Risk  
+            """)
+    else:
+        st.error("No ward data available for allocation analysis")
+
+else:
+    # For LSOA mode, show a note about police allocation
+    st.markdown("---")
+    st.info("💡 **Police Allocation Dashboard** is available in Ward view mode. Switch to 'Ward' view to see officer allocation strategies.")
+
