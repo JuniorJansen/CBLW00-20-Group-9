@@ -825,18 +825,27 @@ if mode == "Ward":
 
         # Display summary metrics
         st.subheader("📊 Allocation Summary")
-        col1, col2, col3, col4, col5 = st.columns(5)
 
-        with col1:
+        # Row 1: Overall stats
+        row1_col1, row1_col2, row1_col3 = st.columns(3)
+        with row1_col1:
+            st.metric("Total Wards", f"{total_wards}")
+        with row1_col2:
             st.metric("Total Officers", f"{total_officers:,}")
-        with col2:
-            st.metric("Total Wards", total_wards)
-        with col3:
-            st.metric("High Risk", f"{high_risk_wards} wards", f"{high_risk_wards/total_wards*100:.1f}%")
-        with col4:
-            st.metric("Medium Risk", f"{medium_risk_wards} wards", f"{medium_risk_wards/total_wards*100:.1f}%")
-        with col5:
-            st.metric("Low Risk", f"{low_risk_wards} wards", f"{low_risk_wards/total_wards*100:.1f}%")
+        with row1_col3:
+            st.markdown("Strategy:\n **30 / 60 / 100 split**")
+        
+
+
+        # Row 2: Breakdown by Risk Level
+        row2_col1, row2_col2, row2_col3 = st.columns(3)
+        with row2_col1:
+            st.metric("🔴 High Risk", f"{high_risk_wards} wards", f"{high_risk_wards/total_wards*100:.1f}%")
+        with row2_col2:
+            st.metric("🟠 Medium Risk", f"{medium_risk_wards} wards", f"{medium_risk_wards/total_wards*100:.1f}%")
+        with row2_col3:
+            st.metric("🟢 Low Risk", f"{low_risk_wards} wards", f"{low_risk_wards/total_wards*100:.1f}%")
+
 
 
         # Top allocation wards
@@ -904,25 +913,34 @@ if mode == "Ward":
         # Implementation notes
         with st.expander("ℹ️ Implementation Notes"):
             st.markdown("""
-            **Baseline Tiered Strategy (30/60/100)**
+                        
+            ### Police Deployment Strategy: **30 / 60 / 100 Model**
 
-            This allocation strategy assigns officers based on ranked burglary risk:
+            - We use a **three-tier allocation strategy** to assign officers based on predicted burglary risk at the ward level. 
+            - This strategy covers both practical policing approaches and insights from crime concentration research.
+            - Allocation is scalable: Can be adjusted if more granular crime data or risk tiers are added.
+            - Simple and intuitive.
+            
+            ---
 
-            - **High Risk Wards**: 100 officers each  
-            - **Medium Risk Wards**: 60 officers each  
-            - **Low Risk Wards**: 30 officers each  
+            ### Allocation Logic
 
-            **Key Features:**
-            - Simple and intuitive tiered structure
-            - Ties officer numbers directly to risk classification
-            - Promotes equitable distribution based on proportional threat
-            - Easier to plan and budget across known ward categories
+            Wards are classified using model-predicted burglary probabilities and sorted into:
 
-            **Risk Categories:**
-            - Wards are sorted by predicted risk score
-            - Top 10% → High Risk  
-            - Middle 40% → Medium Risk  
-            - Bottom 50% → Low Risk  
+            - 🟥 **High Risk Wards** (Top 10%): **100 officers**
+            - 🟧 **Medium Risk Wards** (Middle 40%): **60 officers**
+            - 🟩 **Low Risk Wards** (Bottom 50%): **30 officers**
+
+            This ensures officer resources are distributed proportionally to relative threat levels, while staying within the total available police force size (~34,000 officers across ~680 wards).
+
+            ---
+
+            ### Academic & Policy Support
+
+            - **Crime concentration theory**: 5–10% of areas account for the majority of urban crimes
+            - **Problem-oriented policing**: Focusing on high-need areas produces higher crime reduction per officer deployed (College of Policing, 2022)
+            - **Operational parallels**: NYPD’s *Operation Impact*, Met’s *Operation Bumblebee*, and West Midlands’ *Impact Zones* followed similar focused-distribution patterns.
+
             """)
     else:
         st.error("No ward data available for allocation analysis")
