@@ -15,9 +15,7 @@ import os
 from sklearn.preprocessing import StandardScaler
 from sklearn.impute import SimpleImputer
 import geopandas as gpd
-from esda.moran import Moran
-from libpysal.weights import Queen
-from libpysal.weights import KNN
+
 weights = {
     'b. Income Deprivation Domain': 23.82,
     'c. Employment Deprivation Domain': 23.82,
@@ -27,11 +25,43 @@ weights = {
     'h. Living Environment Deprivation Domain': 5.91,
     'Digital Propensity Score_rev': 7.15,
     'Energy_All_rev': 5.91,
-    'AvPTAI2015': 5.91,
-    'Mean Age': 7.15
+    'AvPTAI2015': 5.91
 }
-from sklearn import tree
 
+def add_moving_averages_per_split(train, test, target_col='Burglary Count', windows=[3, 6]):
+    print("Adding moving average features to training and test sets separately...")
+
+    train = train.sort_values(by=['LSOA code', 'Month']).copy()
+    test = test.sort_values(by=['LSOA code', 'Month']).copy()
+
+    for window in windows:
+        col_name = f'{target_col}_MA{window}'
+
+        # Compute EMA only on training data
+        train[col_name] = train.groupby('LSOA code')[target_col].transform(
+        lambda x: x.shift(1).ewm(span=window, adjust=False).mean()
+    )
+
+
+        # For test set: use the last training EMA value as initialization
+        test[col_name] = np.nan  # Initialize
+
+        for lsoa in test['LSOA code'].unique():
+            train_vals = train[train['LSOA code'] == lsoa][[target_col]].copy()
+            test_vals = test[test['LSOA code'] == lsoa][[target_col]].copy()
+
+            if train_vals.empty or test_vals.empty:
+                continue
+
+            # Combine and shift before EMA
+            combined = pd.concat([train_vals, test_vals])
+            combined_shifted = combined[target_col].shift(1)  # Prevent leakage
+
+            ema = combined_shifted.ewm(span=window, adjust=False).mean()
+            test.loc[test['LSOA code'] == lsoa, col_name] = ema.loc[test_vals.index]
+
+
+    return train, test
 
 def train_eval_models(df, save_models=True):
     """Train and evaluate regression and classification models."""
@@ -42,6 +72,7 @@ def train_eval_models(df, save_models=True):
 
     test = df[df['Month'] > cutoff].copy()
     print(f"Train rows: {train.shape[0]}, Test rows: {test.shape[0]}")
+    train, test = add_moving_averages_per_split(train, test, target_col='Burglary Count', windows=[3, 6])
     # Ensure all necessary columns are present and fill NaNs
 # Reverse feature transformations (apply to both train and test)
     for df_split in [train, test]:
@@ -68,17 +99,21 @@ def train_eval_models(df, save_models=True):
                "Male", "Female", "Mean Male Age", "Mean Female Age", "Population", 
             #    "b. Income Deprivation Domain", "c. Employment Deprivation Domain", "d. Education, Skills and Training Domain", 
             #    "e. Health Deprivation and Disability Domain", 
-            "f. Crime Domain", 
+            #"f. Crime Domain", 
             # "g. Barriers to Housing and Services Domain", 
             #    "h. Living Environment Deprivation Domain", 
                 'Digital Propensity Score', 
                 'Energy_All', 
-                #'Mean Age', 
+                'Mean Age', 
             #'Burglary Count_MA3', 'Burglary Count_MA6',
                'Custom_IMD_Score', 
-               'i. Income Deprivation Affecting Children Index (IDACI)', 'j. Income Deprivation Affecting Older People Index (IDAOPI)', 'Male/Female Ratio',
-            #    #'AvPTAI2015_rev', 'Digital Propensity Score_rev', 'Energy_All_rev', 'Burglary Count_SpatailLag1',
-                'PTAL', 'Lag1', 'Lag2','AvPTAI2015', 'GIZ'
+               #'i. Income Deprivation Affecting Children Index (IDACI)', 'j. Income Deprivation Affecting Older People Index (IDAOPI)', 
+               'Male/Female Ratio',
+                'AvPTAI2015_rev', 'Digital Propensity Score_rev', 'Energy_All_rev', 'Burglary Count_SpatailLag1',
+                'PTAL_rev', 'PTAL',
+            #    'Lag1', 'Lag2',
+            #    'Lag12',
+                'AvPTAI2015', 'GIZ'
                ]
     features = [c for c in train.columns if c not in exclude]
 
@@ -86,37 +121,144 @@ def train_eval_models(df, save_models=True):
     y_train_r, y_test_r = train['Burglary Count'], test['Burglary Count']
     y_train_c, y_test_c = (y_train_r > 0).astype(int), (y_test_r > 0).astype(int)
     print(f"Number of features: {len(features)}")
+    from sklearn.impute import SimpleImputer
+
+    imputer = SimpleImputer(strategy='mean')  # Or median, constant, etc.
+
+    X_train = pd.DataFrame(imputer.fit_transform(X_train), columns=X_train.columns)
+    X_test = pd.DataFrame(imputer.transform(X_test), columns=X_test.columns)
+
 
     if save_models:
         os.makedirs('models', exist_ok=True)
 
-    # REGRESSION MODEL
-    print("\n--- REGRESSION MODEL ---")
-    reg = RandomForestRegressor(
-        n_estimators=200, max_depth=20, min_samples_leaf=2,
-        min_samples_split=5, max_features='sqrt',
-        random_state=42
-    )
-    reg.fit(X_train, y_train_r, sample_weight=sample_weights)
+    #REGRESSION MODEL
+    # print("\n--- REGRESSION MODEL ---")
+    # reg = RandomForestRegressor(
+    #     n_estimators=200, max_depth=20, min_samples_leaf=2,
+    #     min_samples_split=5, max_features='sqrt',
+    #     random_state=42
+    # )
+    # reg.fit(X_train, y_train_r, sample_weight=sample_weights)
 
-    # Evaluate the regression model
+    # # Evaluate the regression model
+    # preds_r = reg.predict(X_test)
+    # rmse = np.sqrt(mean_squared_error(y_test_r, preds_r))
+    # mae = mean_absolute_error(y_test_r, preds_r)
+    # r2 = r2_score(y_test_r, preds_r)
+
+    # print("\nRegression evaluation:")
+    # print(f" RMSE: {rmse:.2f}")
+    # print(f" MAE:  {mae:.2f}")
+    # print(f" R²:   {r2:.3f}")
+
+    # if save_models:
+    #     from joblib import dump
+    #     dump(reg, 'models/burglary_regressor.joblib')
+    #     print("Saved improved regression model to models/burglary_regressor.joblib")
+
+    from sklearn.linear_model import LinearRegression
+
+    #REGRESSION MODEL - LINEAR REGRESSION
+    from sklearn.linear_model import LinearRegression, Ridge
+    from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+    import numpy as np
+
+    # Linear Regression
+    reg = LinearRegression()
+    reg.fit(X_train, y_train_r, sample_weight=sample_weights)
     preds_r = reg.predict(X_test)
+
+    # Evaluation
     rmse = np.sqrt(mean_squared_error(y_test_r, preds_r))
     mae = mean_absolute_error(y_test_r, preds_r)
     r2 = r2_score(y_test_r, preds_r)
 
-    print("\nRegression evaluation:")
+    print("\nLinear Regression Evaluation:")
     print(f" RMSE: {rmse:.2f}")
     print(f" MAE:  {mae:.2f}")
     print(f" R²:   {r2:.3f}")
 
     if save_models:
         from joblib import dump
-        dump(reg, 'models/burglary_regressor.joblib')
-        print("Saved improved regression model to models/burglary_regressor.joblib")
+        dump(reg, 'models/burglary_regressor_linear.joblib')
+        print("Saved linear regression model to models/burglary_regressor_linear.joblib")
+
+    # Ridge Regression
+    ridge = Ridge(alpha=1.0)  # You can tune alpha via cross-validation
+    ridge.fit(X_train, y_train_r, sample_weight=sample_weights)
+    preds_ridge = ridge.predict(X_test)
+
+    # Evaluation
+    rmse_ridge = np.sqrt(mean_squared_error(y_test_r, preds_ridge))
+    mae_ridge = mean_absolute_error(y_test_r, preds_ridge)
+    r2_ridge = r2_score(y_test_r, preds_ridge)
+
+    print("\nRidge Regression Evaluation:")
+    print(f" RMSE: {rmse_ridge:.2f}")
+    print(f" MAE:  {mae_ridge:.2f}")
+    print(f" R²:   {r2_ridge:.3f}")
+
+    if save_models:
+        dump(ridge, 'models/burglary_regressor_ridge.joblib')
+        print("Saved Ridge regression model to models/burglary_regressor_ridge.joblib")
 
 
-    # CLASSIFICATION MODEL
+    # Use all features for classification
+    print("Using all features for classification...")
+    selected_features = features
+    X_train_selected = X_train
+    X_test_selected = X_test
+    print(f"Using {len(selected_features)} features: {', '.join(selected_features)}")
+
+    # Scale features
+    scaler = StandardScaler()
+    X_train_scaled = scaler.fit_transform(X_train_selected)
+    X_test_scaled = scaler.transform(X_test_selected)
+
+    # Train LogisticRegression
+    # print("Training LogisticRegression...")
+    # clf = LogisticRegression(
+    #     max_iter=1000, 
+    #     class_weight='balanced', 
+    #     random_state=42,
+    #     solver='liblinear'  # You can also try 'lbfgs' or 'saga' depending on performance
+    # )
+    # clf.fit(X_train_scaled, y_train_c)
+
+    # Evaluate classification model
+    # preds_c = clf.predict(X_test_scaled)
+    # preds_proba = clf.predict_proba(X_test_scaled)[:, 1]
+
+    # acc = accuracy_score(y_test_c, preds_c)
+    # auc = roc_auc_score(y_test_c, preds_proba)
+
+    # print("\nClassification evaluation:")
+    # print(f" Accuracy: {acc:.3f}")
+    # print(f" ROC AUC: {auc:.3f}")
+    # print(classification_report(y_test_c, preds_c))
+
+    # # Confusion matrix
+    # conf_matrix = confusion_matrix(y_test_c, preds_c)
+    # tn, fp, fn, tp = conf_matrix.ravel()
+    # print("Confusion Matrix:")
+    # print(f" True Negatives: {tn}, False Positives: {fp}")
+    # print(f" False Negatives: {fn}, True Positives: {tp}")
+
+    # if save_models:
+    #     from joblib import dump
+    #     dump(clf, 'models/burglary_logistic_classifier.joblib')
+    #     dump(selected_features, 'models/selected_features.joblib')
+    #     dump(scaler, 'models/logistic_scaler.joblib')
+    #     print("Saved logistic regression classifier, scaler, and feature list")
+
+    # # Return models and evaluation metrics
+    # return reg, clf, features, selected_features, X_test, y_test_r, y_test_c, preds_r, preds_c, preds_proba
+
+
+
+
+    # # # CLASSIFICATION MODEL
     print("\n--- CLASSIFICATION MODEL ---")
 
     # Use all features for classification
@@ -129,14 +271,16 @@ def train_eval_models(df, save_models=True):
     # Train RandomForestClassifier
     print("Training RandomForestClassifier...")
     clf = RandomForestClassifier(
-        n_estimators=200,  # Increased complexity
-        max_depth=10,
-        random_state=42,
-        class_weight='balanced'
-    )
+            n_estimators=200,  # Increased complexity
+            max_depth=20,
+            random_state=42,
+            class_weight='balanced'
+        )
     clf.fit(X_train_selected, y_train_c)
 
+
     # Evaluate classification model
+
     preds_c = clf.predict(X_test_selected)
     preds_proba = clf.predict_proba(X_test_selected)[:, 1]
 
@@ -173,7 +317,7 @@ def visualize_results(reg, clf, features, selected_features, X_test, y_test_r, y
     # Create directory for visualizations
     os.makedirs('visualizations', exist_ok=True)
 
-    # 1. Feature importance for regression model
+    #1. Feature importance for regression model
     print("\nCalculating feature importance...")
     imp = pd.Series(reg.feature_importances_, index=features).sort_values(ascending=True)
     top_imp = imp.tail(16)
@@ -185,7 +329,7 @@ def visualize_results(reg, clf, features, selected_features, X_test, y_test_r, y
     plt.tight_layout()
     plt.savefig('visualizations/feature_importance_regression.png', dpi=300)
 
-    # 2. Classification features importance (all features)
+    #2. Classification features importance (all features)
     plt.figure(figsize=(12, 8))
     clf_imp = pd.Series(clf.feature_importances_, index=selected_features).sort_values(ascending=True)
     top_clf_imp = clf_imp.tail(min(16, len(clf_imp)))
@@ -249,115 +393,7 @@ def visualize_results(reg, clf, features, selected_features, X_test, y_test_r, y
     plt.savefig('visualizations/confusion_matrix.png', dpi=300)
 
     print("\nAll visualizations saved to 'visualizations' directory")
-def visualize_hotspot_map(df, save_path='visualizations/hotspot_map.png'):
-    print("Creating hotspot map...")
 
-    # Load London LSOA shapefile or GeoJSON (replace with your actual path if different)
-    shapefile_path = 'boundaries/LSOA_2011_London_gen_MHW.shp'
-    gdf_london = gpd.read_file(shapefile_path)
-
-    # Ensure hotspot info is in the DataFrame
-    if 'hotspot' not in df.columns:
-        print("Hotspot data not found in dataframe.")
-        return
-
-    # Get latest month (for static map)
-    latest_month = df['Month'].max()
-    df_latest = df[df['Month'] == latest_month]
-
-    # Merge hotspot data with geometry
-    merged = gdf_london.merge(df_latest[['LSOA code', 'hotspot']], left_on='LSOA11CD', right_on='LSOA code', how='left')
-
-    # Plot
-    plt.figure(figsize=(12, 10))
-    merged.plot(column='hotspot', cmap='coolwarm', edgecolor='grey', legend=True, missing_kwds={"color": "lightgrey"})
-    plt.title(f'Hotspot Map – {latest_month}', fontsize=14)
-    plt.axis('off')
-    plt.tight_layout()
-    os.makedirs('visualizations', exist_ok=True)
-    plt.savefig(save_path, dpi=300)
-    print(f"Hotspot map saved to {save_path}")
-
-# def calculate_global_moran(df, shapefile_path='boundaries/LSOA_2011_London_gen_MHW.shp', value_col='Burglary Count'):
-#     import geopandas as gpd
-#     from libpysal.weights import Queen
-#     from esda.moran import Moran
-    
-#     print("Calculating Global Moran's I...")
-
-#     gdf = gpd.read_file(shapefile_path)
-
-#     # Merge on LSOA code
-#     merged = gdf.merge(df[[ 'LSOA code', value_col]], left_on='LSOA11CD', right_on='LSOA code', how='left')
-
-#     # Drop rows with missing value_col for Moran calculation
-#     merged_clean = merged.dropna(subset=[value_col])
-
-#     # Construct spatial weights matrix
-#     knn_weights = KNN.from_dataframe(merged_clean, k=12)  # k nearest neighbors
-#     knn_weights.transform = 'r'  # row-standardize weights
-
-#     moran_knn = Moran(merged_clean[value_col], knn_weights)
-
-#     print(f"KNN Global Moran's I: {moran_knn.I:.4f}, p-value: {moran_knn.p_norm:.4f}")
-
-#     print(f"Global Moran's I: {moran_knn.I:.4f}")
-#     print(f"Expected I (random): {moran_knn.EI:.4f}")
-#     print(f"Variance of I: {moran_knn.VI_norm:.4f}")
-#     print(f"Z-score: {moran_knn.z_norm:.4f}")
-#     print(f"P-value: {moran_knn.p_norm:.4f}")
-
-#     return moran_knn
-
-# def visualize_hotspot_map(df, save_path='visualizations/hotspot_map.png'):
-#     print("Creating hotspot and LISA maps...")
-
-#     import geopandas as gpd
-#     from esda.moran import Moran_Local
-#     from libpysal.weights import Queen
-
-#     # Load LSOA shapefile
-#     shapefile_path = 'boundaries/LSOA_2011_London_gen_MHW.shp'
-#     gdf_london = gpd.read_file(shapefile_path)
-
-#     # Get latest month
-#     latest_month = df['Month'].max()
-#     df_latest = df[df['Month'] == latest_month]
-
-#     # Merge with spatial GeoDataFrame
-#     merged = gdf_london.merge(df_latest[['LSOA code', 'hotspot', 'Burglary Count']],
-#                               left_on='LSOA11CD', right_on='LSOA code', how='left')
-
-#     # Hotspot Map
-#     plt.figure(figsize=(12, 10))
-#     merged.plot(column='hotspot', cmap='coolwarm', edgecolor='grey', legend=True,
-#                 missing_kwds={"color": "lightgrey"})
-#     plt.title(f'Hotspot Map – {latest_month}', fontsize=14)
-#     plt.axis('off')
-#     plt.tight_layout()
-#     os.makedirs('visualizations', exist_ok=True)
-#     plt.savefig(save_path, dpi=300)
-#     print(f"Hotspot map saved to {save_path}")
-
-#     print("Generating LISA cluster map...")
-
-#     lisa_df = merged.dropna(subset=['Burglary Count']).copy()
-#     w = Queen.from_dataframe(lisa_df)
-#     w.transform = 'r'
-
-#     m_local = Moran_Local(lisa_df['Burglary Count'], w)
-#     lisa_df['LISA_cluster'] = m_local.q
-#     cluster_labels = {1: 'High-High', 2: 'Low-Low', 3: 'High-Low', 4: 'Low-High'}
-#     lisa_df['Cluster_Label'] = lisa_df['LISA_cluster'].map(cluster_labels)
-
-#     plt.figure(figsize=(12, 10))
-#     lisa_df.plot(column='Cluster_Label', cmap='Set1', edgecolor='grey', legend=True)
-#     plt.title(f'LISA Cluster Map – {latest_month}', fontsize=14)
-#     plt.axis('off')
-#     plt.tight_layout()
-#     lisa_path = 'visualizations/lisa_cluster_map.png'
-#     plt.savefig(lisa_path, dpi=300)
-#     print(f"LISA cluster map saved to {lisa_path}")
 
 def main():
     SAVE_MODELS = True
@@ -388,10 +424,7 @@ def main():
     except Exception as e:
         print(f"[ERROR] Preprocessing failed at preprocess_data: {e}")
         sys.exit(1)
-    # try:
-    #     moran_knn = calculate_global_moran(df)
-    # except Exception as e:
-    #     print(f"WARNING: Error during Global Moran's I calculation: {e}")
+
     print(df.sample(5).to_string())
     reg, clf, features, selected_features, X_test, y_test_r, y_test_c, preds_r, preds_c, preds_proba = \
         train_eval_models(df, save_models=SAVE_MODELS)
@@ -404,13 +437,6 @@ def main():
        )
     except Exception as e:
        print(f"WARNING: Error during visualization: {e}")
-    try:
-       visualize_hotspot_map(df)
-    except Exception as e:
-       print(f"WARNING: Error during hotspot map visualization: {e}")
-    # visualize_hotspot_map(df)
-
-
 
     print("Analysis complete")
 
