@@ -37,7 +37,7 @@ with st.expander("📊 What Are IMD Scores?"):
 
     with st.container():
         st.image(
-            "C:/Users/20231105/OneDrive/YEAR2/Q4/CBL/IMD.png", 
+            "pages/IMD.png", 
             caption="IMD Domains and Their Indicators", 
             use_container_width=True
         )
