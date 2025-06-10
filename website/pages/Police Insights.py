@@ -487,7 +487,10 @@ try:
             st.stop()
 
         # Calculate mean probability for each ward
-        ward_agg = df_join.groupby(['Ward code', 'Ward name'], as_index=False)[agg_col].mean()
+        ward_agg = df_join.groupby(['Ward code', 'Ward name'], as_index=False).agg({
+            'Burglary_Probability': 'mean',
+            'Predicted_Count': 'sum'
+        })
 
         # Update legend label to reflect probability
         legend_label = 'Average Burglary Probability'
@@ -864,8 +867,7 @@ try:
         st.dataframe(df_display, use_container_width=True)
     else:  # Ward
         st.markdown("## 📋 All Wards – Name and Aggregated Value")
-        df_ward_display = ward_agg[['Ward name', agg_col]].copy()
-        df_ward_display = df_ward_display.rename(columns={agg_col: 'Average_Burglary_Probability'})  # Changed from Sum to Average
+        df_ward_display = ward_agg[['Ward name', agg_col, 'Predicted_Count']].copy()
         st.dataframe(df_ward_display.reset_index(drop=True), use_container_width=True)
 
     # 6) Download button
