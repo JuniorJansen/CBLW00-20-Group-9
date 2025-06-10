@@ -972,7 +972,7 @@ if mode == "Ward":
             - **Operational parallels**: NYPD’s *Operation Impact*, Met’s *Operation Bumblebee*, and West Midlands’ *Impact Zones* followed similar focused-distribution patterns.
 
             """)
-        
+
 
 else:
     # For LSOA mode, show a note about police allocation
