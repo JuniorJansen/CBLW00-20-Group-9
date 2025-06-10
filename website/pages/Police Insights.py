@@ -1090,29 +1090,40 @@ if mode == "Ward":
 
     try:
         if 'Ward code' in gdf.columns and color_field in gdf.columns:
-            ward_values = gdf[color_field].fillna(0)
+            # Use ward_agg as the base dataset instead of gdf
+            risk_pattern_df = ward_agg.copy()
             
-            # Compute Queen contiguity weights for wards
-            w_ward = Queen.from_dataframe(gdf)
+            # Ensure we have geometry for spatial analysis
+            risk_pattern_df = risk_pattern_df.merge(
+                gdf[['Ward name', 'geometry']].drop_duplicates(subset=['Ward name']), 
+                on='Ward name',
+                how='left'
+            )
             
-            # Calculate risk levels with 5 tiers using quantiles
+            # Calculate risk patterns using ward_agg values
+            ward_values = risk_pattern_df[agg_col].fillna(0)
+            
+            # Compute Queen contiguity weights
+            w_ward = Queen.from_dataframe(risk_pattern_df)
+            
+            # Calculate risk levels with 5 tiers
             risk_thresholds = ward_values.quantile([0.2, 0.4, 0.6, 0.8])
-
-            # Add Own_Risk to gdf with 5 tiers
-            gdf['Own_Risk'] = pd.cut(
+            
+            # Add Own_Risk
+            risk_pattern_df['Own_Risk'] = pd.cut(
                 ward_values,
-                bins=[-float('inf'),
-                      risk_thresholds[0.2],
+                bins=[-float('inf'), 
+                      risk_thresholds[0.2], 
                       risk_thresholds[0.4],
                       risk_thresholds[0.6],
-                      risk_thresholds[0.8],
+                      risk_thresholds[0.8], 
                       float('inf')],
                 labels=['Low', 'Low-Medium', 'Medium', 'Medium-High', 'High']
             ).astype(str)
             
-            # Calculate and add Neighbor_Risk to gdf with 5 tiers
+            # Calculate neighbor risk
             neighbor_risks = []
-            for i in range(len(gdf)):
+            for i in range(len(risk_pattern_df)):
                 neighbors = w_ward.neighbors[i]
                 if not neighbors:
                     neighbor_risks.append('No neighbors')
@@ -1129,18 +1140,17 @@ if mode == "Ward":
                     else:
                         neighbor_risks.append('High')
 
-            gdf['Neighbor_Risk'] = neighbor_risks
-            gdf['Risk_Pattern'] = gdf['Own_Risk'] + '-' + gdf['Neighbor_Risk']
+            risk_pattern_df['Neighbor_Risk'] = neighbor_risks
+            risk_pattern_df['Risk_Pattern'] = risk_pattern_df['Own_Risk'] + '-' + risk_pattern_df['Neighbor_Risk']
+            
+            # Create display dataframe
+            display_df = (risk_pattern_df[['Ward name', agg_col, 'Own_Risk', 'Neighbor_Risk', 'Risk_Pattern']]
+                         .sort_values(agg_col, ascending=False)
+                         .reset_index(drop=True))
             
             # Display cluster analysis
-            st.subheader("Ward Risk Patterns")
-            display_df = gdf[['Ward name', color_field, 'Own_Risk', 'Neighbor_Risk', 'Risk_Pattern']].copy()
-            st.dataframe(
-                display_df.sort_values(color_field, ascending=False),
-                use_container_width=True
-            )
-        else:
-            st.info("Could not load ward boundaries or prediction data for risk pattern analysis.")
+            st.subheader(f"Ward Risk Patterns (n={len(display_df)} wards)")
+            st.dataframe(display_df, use_container_width=True)
             
     except Exception as e:
         st.error(f"Error in ward risk pattern analysis: {e}")
