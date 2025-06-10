@@ -652,47 +652,55 @@ try:
     ).add_to(m)
 
     if mode == "Ward":
-        # Calculate cluster labels
-        ward_values = gdf['Burglary_Probability'].fillna(0)  # Use Burglary_Probability directly
+        # Calculate cluster labels with 5 tiers
+        ward_values = gdf[color_field].fillna(0)
         w_ward = Queen.from_dataframe(gdf)
+        
+        # Calculate risk thresholds using 5 tiers
+        risk_thresholds = ward_values.quantile([0.2, 0.4, 0.6, 0.8])
 
-        # Calculate risk thresholds before binning
-        thresholds = ward_values.quantile([0.33, 0.66])
-
-        # Add risk levels to GeoDataFrame
+        # Add Own_Risk to gdf with 5 tiers
         gdf['Own_Risk'] = pd.cut(
             ward_values,
-            bins=[-float('inf'), thresholds[0.33], thresholds[0.66], float('inf')],
-            labels=['Low', 'Medium', 'High']
+            bins=[-float('inf'),
+                  risk_thresholds[0.2],
+                  risk_thresholds[0.4],
+                  risk_thresholds[0.6],
+                  risk_thresholds[0.8],
+                  float('inf')],
+            labels=['Low', 'Low-Medium', 'Medium', 'Medium-High', 'High']
         ).astype(str)
-
-        # Calculate neighbor risk
+        
+        # Calculate neighbor risk with 5 tiers
         neighbor_risks = []
         for i in range(len(gdf)):
             neighbors = w_ward.neighbors[i]
             if not neighbors:
                 neighbor_risks.append('No neighbors')
             else:
-                neighbor_vals = ward_values.iloc[neighbors]
-                avg = neighbor_vals.mean()
-                if avg <= thresholds[0.33]:
+                neighbor_vals = ward_values.iloc[neighbors].mean()
+                if neighbor_vals <= risk_thresholds[0.2]:
                     neighbor_risks.append('Low')
-                elif avg <= thresholds[0.66]:
+                elif neighbor_vals <= risk_thresholds[0.4]:
+                    neighbor_risks.append('Low-Medium')
+                elif neighbor_vals <= risk_thresholds[0.6]:
                     neighbor_risks.append('Medium')
+                elif neighbor_vals <= risk_thresholds[0.8]:
+                    neighbor_risks.append('Medium-High')
                 else:
                     neighbor_risks.append('High')
 
         # Add risk pattern information to GeoDataFrame
         gdf['Neighbor_Risk'] = neighbor_risks
         gdf['Risk_Pattern'] = gdf['Own_Risk'] + '-' + gdf['Neighbor_Risk']
-
-        # Update GeoJSON layer with the new fields
+        
+        # Update GeoJSON layer with new fields and labels
         folium.GeoJson(
             gdf,
             style_function=style_function,
             tooltip=folium.GeoJsonTooltip(
                 fields=['Ward name', 'Burglary_Probability', 'Own_Risk', 'Neighbor_Risk', 'Risk_Pattern'],
-                aliases=['Ward', 'Probability', 'Ward Risk', 'Neighbor Risk', 'Risk Pattern'],
+                aliases=['Ward', 'Probability', 'Own Risk', 'Neighbor Risk', 'Risk Pattern'],
                 localize=True,
                 sticky=False,
                 labels=True
@@ -894,10 +902,10 @@ if mode == "Ward":
     # Create a fresh copy of ward_agg for allocation calculations
     ward_allocation_data = ward_agg.copy()
     ward_allocation_data = ward_allocation_data.dropna(subset=['Ward name']).drop_duplicates(subset=['Ward name'])
-
+    
     # Determine which column to use for risk assessment
     allocation_agg_col = 'Burglary_Probability' if 'Burglary_Probability' in ward_allocation_data.columns else 'Predicted_Count'
-
+    
     # Sort wards by risk metric and assign risk categories
     ward_allocation_data = ward_allocation_data.sort_values(by=allocation_agg_col, ascending=False).reset_index(drop=True)
     total_wards = len(ward_allocation_data)
@@ -1072,7 +1080,7 @@ if mode == "Ward":
         - **Operational parallels**: NYPD's *Operation Impact*, Met's *Operation Bumblebee*, and West Midlands' *Impact Zones* followed similar focused-distribution patterns.
 
         """)
-
+    
 
     # Add hotspot analysis section
     st.markdown("---")
@@ -1081,21 +1089,26 @@ if mode == "Ward":
     try:
         if 'Ward code' in gdf.columns and color_field in gdf.columns:
             ward_values = gdf[color_field].fillna(0)
-
+            
             # Compute Queen contiguity weights for wards
             w_ward = Queen.from_dataframe(gdf)
+            
+            # Calculate risk levels with 5 tiers using quantiles
+            risk_thresholds = ward_values.quantile([0.2, 0.4, 0.6, 0.8])
 
-            # Calculate risk levels
-            risk_thresholds = ward_values.quantile([0.33, 0.66])
-
-            # Add Own_Risk to gdf
+            # Add Own_Risk to gdf with 5 tiers
             gdf['Own_Risk'] = pd.cut(
                 ward_values,
-                bins=[-float('inf'), risk_thresholds[0.33], risk_thresholds[0.66], float('inf')],
-                labels=['Low', 'Medium', 'High']
+                bins=[-float('inf'),
+                      risk_thresholds[0.2],
+                      risk_thresholds[0.4],
+                      risk_thresholds[0.6],
+                      risk_thresholds[0.8],
+                      float('inf')],
+                labels=['Low', 'Low-Medium', 'Medium', 'Medium-High', 'High']
             ).astype(str)
-
-            # Calculate and add Neighbor_Risk to gdf
+            
+            # Calculate and add Neighbor_Risk to gdf with 5 tiers
             neighbor_risks = []
             for i in range(len(gdf)):
                 neighbors = w_ward.neighbors[i]
@@ -1103,16 +1116,20 @@ if mode == "Ward":
                     neighbor_risks.append('No neighbors')
                 else:
                     neighbor_vals = ward_values.iloc[neighbors].mean()
-                    if neighbor_vals <= risk_thresholds[0.33]:
+                    if neighbor_vals <= risk_thresholds[0.2]:
                         neighbor_risks.append('Low')
-                    elif neighbor_vals <= risk_thresholds[0.66]:
+                    elif neighbor_vals <= risk_thresholds[0.4]:
+                        neighbor_risks.append('Low-Medium')
+                    elif neighbor_vals <= risk_thresholds[0.6]:
                         neighbor_risks.append('Medium')
+                    elif neighbor_vals <= risk_thresholds[0.8]:
+                        neighbor_risks.append('Medium-High')
                     else:
                         neighbor_risks.append('High')
 
             gdf['Neighbor_Risk'] = neighbor_risks
             gdf['Risk_Pattern'] = gdf['Own_Risk'] + '-' + gdf['Neighbor_Risk']
-
+            
             # Display cluster analysis
             st.subheader("Ward Risk Patterns")
             display_df = gdf[['Ward name', color_field, 'Own_Risk', 'Neighbor_Risk', 'Risk_Pattern']].copy()
@@ -1122,7 +1139,7 @@ if mode == "Ward":
             )
         else:
             st.info("Could not load ward boundaries or prediction data for risk pattern analysis.")
-
+            
     except Exception as e:
         st.error(f"Error in ward risk pattern analysis: {e}")
 
