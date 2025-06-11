@@ -593,7 +593,7 @@ try:
     )
 
     def style_function(feature):
-        """Style function: LSOA colored by Risk_Level; Ward by gradient if numeric."""
+        """Style function: LSOA colored by Risk_Level; Ward by Own_Risk."""
         props = feature['properties']
         if mode == "LSOA":
             # Color by Risk_Level
@@ -606,29 +606,17 @@ try:
                 'fillOpacity': 0.7
             }
         else:
-            # Ward mode: numeric gradient
-            val = props.get(color_field)
-            if pd.isna(val) or val is None:
-                color = '#888888'
-            else:
-                try:
-                    num = float(val)
-                    if not hasattr(style_function, '_min_max'):
-                        valid_vals = gdf[color_field].dropna().astype(float)
-                        if len(valid_vals) > 0:
-                            style_function._min_max = (valid_vals.min(), valid_vals.max())
-                        else:
-                            style_function._min_max = (0, 1)
-                    mn, mx = style_function._min_max
-                    pct = (num - mn) / (mx - mn) if mx > mn else 0
-                    pct = max(0, min(1, pct))
-                    red = int(255 * pct)
-                    green = int(255 * (1 - pct))
-                    color = f'#{red:02x}{green:02x}64'
-                except:
-                    color = '#888888'
+            # Ward mode: color by Own_Risk (5 tiers)
+            risk_val = props.get('Own_Risk')
+            risk_colors = {
+                'Very Low': '#00ff00',    # Green
+                'Low': '#88ff00',         # Light green
+                'Medium': '#ffaa00',      # Orange
+                'High': '#ff5500',        # Orange-red
+                'Very High': '#ff0000'    # Red
+            }
             return {
-                'fillColor': color,
+                'fillColor': risk_colors.get(str(risk_val), '#888888'),
                 'color': 'white',
                 'weight': 0.5,
                 'fillOpacity': 0.7
@@ -903,7 +891,7 @@ if mode == "Ward":
 
     # Create a fresh copy of ward_agg for allocation calculations
     ward_allocation_data = ward_agg.copy()
-    ward_allocation_data = ward_allocation_data.dropna(subset=['Ward name']).drop_duplicates(subset=['Ward name'])
+    ward_allocation_data = ward_allocation_data.dropna(subset=['Ward code']).drop_duplicates(subset=['Ward code'])
     
     # Determine which column to use for risk assessment
     allocation_agg_col = 'Burglary_Probability' if 'Burglary_Probability' in ward_allocation_data.columns else 'Predicted_Count'
@@ -1088,9 +1076,10 @@ if mode == "Ward":
     st.markdown("---")
     st.subheader("🔥 Ward-Level Risk Patterns")
 
+    # Update the risk_pattern_df section with new labels
     try:
         if 'Ward code' in gdf.columns and color_field in gdf.columns:
-            # Use ward_agg as the base dataset instead of gdf
+            # Use ward_agg as the base dataset
             risk_pattern_df = ward_agg.copy()
             
             # Ensure we have geometry for spatial analysis
@@ -1109,7 +1098,7 @@ if mode == "Ward":
             # Calculate risk levels with 5 tiers
             risk_thresholds = ward_values.quantile([0.2, 0.4, 0.6, 0.8])
             
-            # Add Own_Risk
+            # Add Own_Risk with new labels
             risk_pattern_df['Own_Risk'] = pd.cut(
                 ward_values,
                 bins=[-float('inf'), 
@@ -1118,10 +1107,10 @@ if mode == "Ward":
                       risk_thresholds[0.6],
                       risk_thresholds[0.8], 
                       float('inf')],
-                labels=['Low', 'Low-Medium', 'Medium', 'Medium-High', 'High']
+                labels=['Very Low', 'Low', 'Medium', 'High', 'Very High']
             ).astype(str)
             
-            # Calculate neighbor risk
+            # Calculate neighbor risk with new labels
             neighbor_risks = []
             for i in range(len(risk_pattern_df)):
                 neighbors = w_ward.neighbors[i]
@@ -1130,15 +1119,15 @@ if mode == "Ward":
                 else:
                     neighbor_vals = ward_values.iloc[neighbors].mean()
                     if neighbor_vals <= risk_thresholds[0.2]:
-                        neighbor_risks.append('Low')
+                        neighbor_risks.append('Very Low')
                     elif neighbor_vals <= risk_thresholds[0.4]:
-                        neighbor_risks.append('Low-Medium')
+                        neighbor_risks.append('Low')
                     elif neighbor_vals <= risk_thresholds[0.6]:
                         neighbor_risks.append('Medium')
                     elif neighbor_vals <= risk_thresholds[0.8]:
-                        neighbor_risks.append('Medium-High')
-                    else:
                         neighbor_risks.append('High')
+                    else:
+                        neighbor_risks.append('Very High')
 
             risk_pattern_df['Neighbor_Risk'] = neighbor_risks
             risk_pattern_df['Risk_Pattern'] = risk_pattern_df['Own_Risk'] + '-' + risk_pattern_df['Neighbor_Risk']
@@ -1149,7 +1138,7 @@ if mode == "Ward":
                          .reset_index(drop=True))
             
             # Display cluster analysis
-            st.subheader(f"Ward Risk Patterns (n={len(display_df)} wards)")
+            st.subheader(f"Ward Risk Patterns")
             st.dataframe(display_df, use_container_width=True)
             
     except Exception as e:
