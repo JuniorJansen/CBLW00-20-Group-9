@@ -593,7 +593,7 @@ try:
     )
 
     def style_function(feature):
-        """Style function: LSOA colored by Risk_Level; Ward by Own_Risk."""
+        """Style function: LSOA colored by Risk_Level; Ward by gradient if numeric."""
         props = feature['properties']
         if mode == "LSOA":
             # Color by Risk_Level
@@ -606,17 +606,29 @@ try:
                 'fillOpacity': 0.7
             }
         else:
-            # Ward mode: color by Own_Risk (5 tiers)
-            risk_val = props.get('Own_Risk')
-            risk_colors = {
-                'Very Low': '#00ff00',    # Green
-                'Low': '#88ff00',         # Light green
-                'Medium': '#ffaa00',      # Orange
-                'High': '#ff5500',        # Orange-red
-                'Very High': '#ff0000'    # Red
-            }
+            # Ward mode: numeric gradient
+            val = props.get(color_field)
+            if pd.isna(val) or val is None:
+                color = '#888888'
+            else:
+                try:
+                    num = float(val)
+                    if not hasattr(style_function, '_min_max'):
+                        valid_vals = gdf[color_field].dropna().astype(float)
+                        if len(valid_vals) > 0:
+                            style_function._min_max = (valid_vals.min(), valid_vals.max())
+                        else:
+                            style_function._min_max = (0, 1)
+                    mn, mx = style_function._min_max
+                    pct = (num - mn) / (mx - mn) if mx > mn else 0
+                    pct = max(0, min(1, pct))
+                    red = int(255 * pct)
+                    green = int(255 * (1 - pct))
+                    color = f'#{red:02x}{green:02x}64'
+                except:
+                    color = '#888888'
             return {
-                'fillColor': risk_colors.get(str(risk_val), '#888888'),
+                'fillColor': color,
                 'color': 'white',
                 'weight': 0.5,
                 'fillOpacity': 0.7
@@ -1036,21 +1048,21 @@ if mode == "Ward":
     )
 
     # Implementation notes
-    with st.expander("ℹ️ Implementation Notes"):
+    with st.expander("ℹ️ Implementation and Justification"):
         st.markdown("""
                         
-        ### Police Deployment Strategy: **30 / 60 / 100 Model**
+        ### Police Deployment Strategy: **5 tier Allocation**
 
-        - We use a **three-tier allocation strategy** to assign officers based on predicted burglary risk at the ward level. 
+        - We use a **five-tier allocation strategy** to assign officers based on predicted burglary risk at the ward level. 
         - This strategy covers both practical policing approaches and insights from crime concentration research.
         - Allocation is scalable: Can be adjusted if more granular crime data or risk tiers are added.
-        - Simple and intuitive.
+        - The model is simple and intuitive.
             
         ---
 
         ### Allocation Logic
 
-        Wards are classified using predicted burglary counts and sorted into:
+        Wards are sorted by predicted burglary count, based on our predictive model. Based on this ranking, we divide wards into 5 categories to reflect levels of threat and vulnerability.
 
         - 🟥 **High Risk** (Top 10%) → **100 officers**
         - 🟠 **Medium-High Risk** (Next 5%) → **75 officers**
@@ -1059,6 +1071,7 @@ if mode == "Ward":
         - 🟩 **Low Risk** (Remaining 45%) → **30 officers**
 
         This multi-tiered strategy enables finer targeting of police resources, responding more precisely to risk gradation.
+        Extra officers in high-risk areas yield significantly greater reductions in crime than the same officers spread across more low-risk areas.
         It ensures officer resources are distributed proportionally to relative threat levels, while staying within the total available police force size (~34,000 officers across ~680 wards).
 
          ---
@@ -1076,10 +1089,9 @@ if mode == "Ward":
     st.markdown("---")
     st.subheader("🔥 Ward-Level Risk Patterns")
 
-    # Update the risk_pattern_df section with new labels
     try:
         if 'Ward code' in gdf.columns and color_field in gdf.columns:
-            # Use ward_agg as the base dataset
+            # Use ward_agg as the base dataset instead of gdf
             risk_pattern_df = ward_agg.copy()
             
             # Ensure we have geometry for spatial analysis
@@ -1098,7 +1110,7 @@ if mode == "Ward":
             # Calculate risk levels with 5 tiers
             risk_thresholds = ward_values.quantile([0.2, 0.4, 0.6, 0.8])
             
-            # Add Own_Risk with new labels
+            # Add Own_Risk
             risk_pattern_df['Own_Risk'] = pd.cut(
                 ward_values,
                 bins=[-float('inf'), 
@@ -1107,10 +1119,10 @@ if mode == "Ward":
                       risk_thresholds[0.6],
                       risk_thresholds[0.8], 
                       float('inf')],
-                labels=['Very Low', 'Low', 'Medium', 'High', 'Very High']
+                labels=['Low', 'Low-Medium', 'Medium', 'Medium-High', 'High']
             ).astype(str)
             
-            # Calculate neighbor risk with new labels
+            # Calculate neighbor risk
             neighbor_risks = []
             for i in range(len(risk_pattern_df)):
                 neighbors = w_ward.neighbors[i]
@@ -1119,15 +1131,15 @@ if mode == "Ward":
                 else:
                     neighbor_vals = ward_values.iloc[neighbors].mean()
                     if neighbor_vals <= risk_thresholds[0.2]:
-                        neighbor_risks.append('Very Low')
-                    elif neighbor_vals <= risk_thresholds[0.4]:
                         neighbor_risks.append('Low')
+                    elif neighbor_vals <= risk_thresholds[0.4]:
+                        neighbor_risks.append('Low-Medium')
                     elif neighbor_vals <= risk_thresholds[0.6]:
                         neighbor_risks.append('Medium')
                     elif neighbor_vals <= risk_thresholds[0.8]:
-                        neighbor_risks.append('High')
+                        neighbor_risks.append('Medium-High')
                     else:
-                        neighbor_risks.append('Very High')
+                        neighbor_risks.append('High')
 
             risk_pattern_df['Neighbor_Risk'] = neighbor_risks
             risk_pattern_df['Risk_Pattern'] = risk_pattern_df['Own_Risk'] + '-' + risk_pattern_df['Neighbor_Risk']
@@ -1138,7 +1150,7 @@ if mode == "Ward":
                          .reset_index(drop=True))
             
             # Display cluster analysis
-            st.subheader(f"Ward Risk Patterns")
+            st.subheader(f"Ward Risk Patterns (n={len(display_df)} wards)")
             st.dataframe(display_df, use_container_width=True)
             
     except Exception as e:
