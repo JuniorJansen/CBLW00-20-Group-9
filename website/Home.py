@@ -4,15 +4,8 @@ import streamlit as st
 st.set_page_config(page_title="London Burglary Predictor", layout="centered", page_icon="🔐")
 st.markdown("""
     <style>
-    /* Hide the theme selector button */
-    [data-testid="stThemeToggle"], 
-    [data-testid="stSidebarThemeSwitcher"],
-    .st-emotion-cache-10trblm.e1nzilvr1 { display: none !important; }
-
-    /* Force background and text regardless of user theme */
-    body, .stApp {
-        background-color: #eafafa !important;
-        color: #000000 !important;
+    .stApp {
+        background-color: #eafafa;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -48,4 +41,3 @@ st.markdown("ℹ️ Navigate using the sidebar to access calculator, insights, m
 
 # Footer
 st.caption("Developed for 4CBLW00-20 - Group 9")
-
