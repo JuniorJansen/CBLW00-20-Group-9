@@ -10,12 +10,11 @@ import os
 from difflib import get_close_matches
 import plotly.express as px
 import plotly.graph_objects as go
-from esda.moran import Moran
 from libpysal.weights import Queen
 
 
+
 def get_explanation(col, value):
-    # Attempt to convert to float; if it fails, treat as “missing” or “N/A”
     try:
         numeric_value = float(value)
     except (TypeError, ValueError):
@@ -112,7 +111,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Password that police has access to
 PASSWORD = "police123"
 
 # Initialize session state for authentication
@@ -138,7 +136,7 @@ else:
     st.title("🚓 Police Insights")
     st.write("Welcome! Here are your restricted insights:")
 
-# --- Load predictions CSV ---
+#Load predictions CSV
 @st.cache_data
 def load_predictions():
     try:
@@ -191,10 +189,8 @@ if missing_cols:
     st.error(f"CSV missing required columns: {missing_cols}")
     st.stop()
 
-# Sidebar: only the "View by" radio
 mode = st.sidebar.radio("View by", ["LSOA", "Ward"], index=0)
 
-# 1) Filter df_pred by selected year/month
 try:
     years = sorted([y for y in df_pred['Year'].unique() if pd.notna(y)])
     months = sorted([m for m in df_pred['Month'].unique() if pd.notna(m)])
@@ -237,16 +233,15 @@ def load_lsoa_boundaries():
                 st.error(f"Error reading GeoJSON as JSON: {e2}")
                 return None
 
-        # Ensure we have a valid CRS
+        
         if gdf.crs is None:
             gdf = gdf.set_crs(epsg=4326)
         else:
             gdf = gdf.to_crs(epsg=4326)
 
-        # Simplify geometry for performance
+        
         gdf['geometry'] = gdf.geometry.simplify(tolerance=0.0001, preserve_topology=True)
 
-        # Rename LSOA code & name if needed
         rename_dict = {}
         lsoa_code_candidates = [
             'LSOA21CD', 'lsoa21cd', 'LSOA21_CD', 'lsoa21_cd',
@@ -310,7 +305,7 @@ def load_lsoa_ward_mapping():
 
         df_map = pd.read_csv(map_file, dtype=str)
 
-        # Rename columns flexibly
+
         column_mappings = {}
         lsoa_col_candidates = [
             'LSOA21CD', 'lsoa21cd', 'LSOA21_CD', 'lsoa21_cd',
@@ -351,7 +346,6 @@ def load_lsoa_ward_mapping():
         st.error(f"Error reading mapping file: {e}")
         return None
 
-# Initialize session state
 if 'clicked_ward' not in st.session_state:
     st.session_state.clicked_ward = None
 if 'clicked_lsoa' not in st.session_state:
@@ -359,7 +353,6 @@ if 'clicked_lsoa' not in st.session_state:
 
 try:
     if mode == "LSOA":
-        # Load LSOA boundaries
         gdf_base = load_lsoa_boundaries()
         if gdf_base is None:
             st.stop()
@@ -367,22 +360,15 @@ try:
             st.error("LSOA GeoJSON missing LSOA code field")
             st.stop()
 
-        # Clean codes in df_filt
         df_filt['LSOA code'] = df_filt['LSOA code'].astype(str).str.strip()
 
-        # Merge geometry with predictions
         gdf = gdf_base.merge(df_filt, on='LSOA code', how='left')
 
-        # --- Spatial autocorrelation cluster labels ---
         try:
-            # Only compute if enough data
             if 'Burglary_Probability' in gdf.columns and gdf['Burglary_Probability'].notna().sum() > 1:
                 values = gdf['Burglary_Probability'].fillna(0)
                 w = Queen.from_dataframe(gdf)
-                from esda.moran import Moran_Local
-                import numpy as np
 
-                # Bin own risk
                 bins = pd.cut(
                     values,
                     bins=[-np.inf, 0.33, 0.66, np.inf],
@@ -416,13 +402,12 @@ try:
 
         # Use Risk_Level for coloring
         color_field = 'Risk_Level'
-        # Use Burglary_Probability for hover tooltip
+
         tooltip_field = 'Burglary_Probability'
         legend_label = 'Risk Level'
         name_field = 'LSOA name' if 'LSOA name' in gdf.columns else 'LSOA code'
         code_field = 'LSOA code'
 
-        # Build df_display by merging df_filt with names
         lsoa_names = gdf_base[['LSOA code', 'LSOA name']].drop_duplicates()
         df_display = df_filt.merge(lsoa_names, on='LSOA code', how='left')
         desired_cols = ['LSOA code', 'LSOA name']
@@ -431,7 +416,7 @@ try:
                 desired_cols.append(c)
         df_display = gdf[desired_cols].reset_index(drop=True)
 
-    else:  # Ward mode
+    else:  
         df_map = load_lsoa_ward_mapping()
         gdf_base = load_ward_boundaries()
         if df_map is None or gdf_base is None:
@@ -476,7 +461,6 @@ try:
             st.error("No matching data found between predictions and ward mapping")
             st.stop()
 
-        # Change aggregation column to Burglary_Probability
         agg_col = None
         if 'Burglary_Probability' in df_join.columns:
             agg_col = 'Burglary_Probability'
@@ -486,20 +470,16 @@ try:
             st.error("No suitable column for aggregation")
             st.stop()
 
-        # Calculate mean probability for each ward
         ward_agg = df_join.groupby(['Ward code', 'Ward name'], as_index=False).agg({
             'Burglary_Probability': 'mean',
             'Predicted_Count': 'sum'
         })
 
-        # Update legend label to reflect probability
         legend_label = 'Average Burglary Probability'
 
-        # Update display columns for probability
         df_ward_display = ward_agg[['Ward name', agg_col]].copy()
         df_ward_display = df_ward_display.rename(columns={agg_col: 'Average_Burglary_Probability'})
 
-        # Update the display columns
         df_ward_display = ward_agg[['Ward name', agg_col]].copy()
         df_ward_display = df_ward_display.rename(columns={agg_col: 'Average_Burglary_Probability'})
 
@@ -517,24 +497,21 @@ try:
 
         merge_success = False
 
-        # Strategy 1: merge on code+name
+
         gdf_temp = gdf.merge(ward_agg[['Ward code', 'Ward name', agg_col]], on=['Ward code', 'Ward name'], how='left')
         if gdf_temp[agg_col].notna().sum() > 0:
             gdf = gdf_temp; merge_success = True
 
-        # Strategy 2: merge on code only
         if not merge_success:
             gdf_temp = gdf.merge(ward_agg[['Ward code', agg_col]], on='Ward code', how='left')
             if gdf_temp[agg_col].notna().sum() > 0:
                 gdf = gdf_temp; merge_success = True
 
-        # Strategy 3: merge on name normalized
         if not merge_success:
             gdf_temp = gdf.merge(ward_agg[['Ward name normalized', agg_col]], on='Ward name normalized', how='left')
             if gdf_temp[agg_col].notna().sum() > 0:
                 gdf = gdf_temp; merge_success = True
 
-        # Strategy 4: fuzzy match
         if not merge_success:
             boundary_names = gdf['Ward name normalized'].unique()
             mapping_names = ward_agg['Ward name normalized'].unique()
@@ -637,7 +614,7 @@ try:
     # Tooltip fields
     tooltip_fields = [name_field, tooltip_field]
     tooltip_aliases = [mode, 'Burglary_Probability']
-    # Add cluster labels if present
+    # Add cluster labels
     if 'Cluster_Combo' in gdf.columns:
         tooltip_fields += ['Own_Risk', 'Neighbor_Risk', 'Cluster_Combo']
         tooltip_aliases += ['Own Risk', 'Neighbor Risk', 'Cluster']
@@ -655,14 +632,14 @@ try:
     ).add_to(m)
 
     if mode == "Ward":
-        # Calculate cluster labels with 5 tiers
+        # Calculate cluster labels 
         ward_values = gdf[color_field].fillna(0)
         w_ward = Queen.from_dataframe(gdf)
         
-        # Calculate risk thresholds using 5 tiers
+        # Calculate risk thresholds 
         risk_thresholds = ward_values.quantile([0.2, 0.4, 0.6, 0.8])
 
-        # Add Own_Risk to gdf with 5 tiers
+        # Add Own_Risk to gdf 
         gdf['Own_Risk'] = pd.cut(
             ward_values,
             bins=[-float('inf'),
@@ -671,10 +648,10 @@ try:
                   risk_thresholds[0.6],
                   risk_thresholds[0.8],
                   float('inf')],
-            labels=['Low', 'Low-Medium', 'Medium', 'Medium-High', 'High']
+            labels=['Very Low', 'Low', 'Medium', 'High', 'Very High']
         ).astype(str)
         
-        # Calculate neighbor risk with 5 tiers
+        # Calculate neighbor risk 
         neighbor_risks = []
         for i in range(len(gdf)):
             neighbors = w_ward.neighbors[i]
@@ -683,15 +660,15 @@ try:
             else:
                 neighbor_vals = ward_values.iloc[neighbors].mean()
                 if neighbor_vals <= risk_thresholds[0.2]:
-                    neighbor_risks.append('Low')
+                    neighbor_risks.append('Vert Low')
                 elif neighbor_vals <= risk_thresholds[0.4]:
-                    neighbor_risks.append('Low-Medium')
+                    neighbor_risks.append('Low')
                 elif neighbor_vals <= risk_thresholds[0.6]:
                     neighbor_risks.append('Medium')
                 elif neighbor_vals <= risk_thresholds[0.8]:
-                    neighbor_risks.append('Medium-High')
-                else:
                     neighbor_risks.append('High')
+                else:
+                    neighbor_risks.append('Very High')
 
         # Add risk pattern information to GeoDataFrame
         gdf['Neighbor_Risk'] = neighbor_risks
@@ -751,8 +728,7 @@ try:
         except Exception as e:
             st.error(f"Error processing map click: {e}")
 
-    # ────────────────────────────────────────────────────────────────────────────
-    # 4) Detail section: split logic by mode and selection
+
 
     if mode == "LSOA":
         if st.session_state.clicked_lsoa is not None:
@@ -829,7 +805,6 @@ try:
                         if sort_col in ward_data.columns:
                             top_5 = ward_data.nlargest(5, sort_col)
 
-                            # ─── Reload the LSOA boundaries so you have "LSOA name" ───
                             lsoa_gdf = load_lsoa_boundaries()
                             if lsoa_gdf is not None and 'LSOA code' in lsoa_gdf.columns and 'LSOA name' in lsoa_gdf.columns:
                                 lsoa_names = lsoa_gdf[['LSOA code', 'LSOA name']].drop_duplicates()
@@ -843,7 +818,6 @@ try:
                             if 'Risk_Level' in top_5.columns:
                                 display_cols.append('Risk_Level')
 
-                            # Only keep whichever of those columns actually exist
                             display_cols = [col for col in display_cols if col in top_5.columns]
 
                             st.dataframe(
@@ -861,16 +835,78 @@ try:
         else:
             st.write("Click on a Ward in the map above to see its top-5 LSOAs.")
 
-    # 5) Show the full data table below map/details
+
     if mode == "LSOA":
         st.markdown("## 📋 All LSOAs – Name, Predicted Count, Probability, Risk")
         st.dataframe(df_display, use_container_width=True)
-    else:  # Ward
-        st.markdown("## 📋 All Wards – Name and Aggregated Value")
-        df_ward_display = ward_agg[['Ward name', agg_col, 'Predicted_Count']].copy()
-        st.dataframe(df_ward_display.reset_index(drop=True), use_container_width=True)
+    else:  
+        st.markdown("## 📋 All Wards – Name, Risk Pattern and Aggregated Values")
+        
+        # Calculate risk patterns for ward_agg
+        ward_values = ward_agg[agg_col].fillna(0)
+        risk_thresholds = ward_values.quantile([0.2, 0.4, 0.6, 0.8])
+        
+        # Add Own_Risk
+        ward_agg['Own_Risk'] = pd.cut(
+            ward_values,
+            bins=[-float('inf'), 
+                  risk_thresholds[0.2], 
+                  risk_thresholds[0.4],
+                  risk_thresholds[0.6],
+                  risk_thresholds[0.8], 
+                  float('inf')],
+            labels=['Very Low', 'Low', 'Medium', 'High', 'Very High']
+        ).astype(str)
+        
+        # Create a spatial weights matrix using ward geometries
+        ward_gdf = gdf[['Ward name', 'geometry']].drop_duplicates(subset=['Ward name'])
+        ward_gdf = ward_gdf.merge(ward_agg[['Ward name', agg_col]], on='Ward name', how='right')
+        w_ward = Queen.from_dataframe(ward_gdf)
+        
+        # Calculate neighbor risk
+        neighbor_risks = []
+        for _, row in ward_agg.iterrows():
+            ward_name = row['Ward name']
+            ward_idx = ward_gdf[ward_gdf['Ward name'] == ward_name].index
+            
+            if len(ward_idx) == 0:
+                neighbor_risks.append('No neighbors')
+                continue
+                
+            ward_idx = ward_idx[0]
+            neighbors = w_ward.neighbors[ward_idx]
+            
+            if not neighbors:
+                neighbor_risks.append('No neighbors')
+            else:
+                neighbor_vals = ward_gdf.iloc[neighbors][agg_col].mean()
+                if neighbor_vals <= risk_thresholds[0.2]:
+                    neighbor_risks.append('Very Low')
+                elif neighbor_vals <= risk_thresholds[0.4]:
+                    neighbor_risks.append('Low')
+                elif neighbor_vals <= risk_thresholds[0.6]:
+                    neighbor_risks.append('Medium')
+                elif neighbor_vals <= risk_thresholds[0.8]:
+                    neighbor_risks.append('High')
+                else:
+                    neighbor_risks.append('Very High')
+        
+        ward_agg['Neighbor_Risk'] = neighbor_risks
+        ward_agg['Risk_Pattern'] = ward_agg['Own_Risk'] + '-' + ward_agg['Neighbor_Risk']
+        
+        # Create display DataFrame
+        df_ward_display = ward_agg[['Ward name', agg_col, 'Predicted_Count', 'Own_Risk', 'Neighbor_Risk', 'Risk_Pattern']].copy()
+        df_ward_display = df_ward_display.rename(columns={
+            agg_col: 'Burglary Probability',
+            'Predicted_Count': 'Predicted Burglaries'
+        })
+        
+        st.dataframe(
+            df_ward_display.sort_values('Burglary Probability', ascending=False).reset_index(drop=True),
+            use_container_width=True
+        )
 
-    # 6) Download button
+
     if mode == "LSOA":
         csv_data = df_display.to_csv(index=False)
         st.download_button(
@@ -891,19 +927,14 @@ try:
 except Exception as e:
     st.error(f"Error displaying data table: {e}")
 
-# # NEW additions:
-# # ═══════════════════════════════════════════════════════════════════════════════
-# # POLICE ALLOCATION DASHBOARD - BASELINE SCHEME (30/60/100)
 
 
-# Only show Police Allocation Dashboard in Ward mode
 if mode == "Ward":
     st.markdown("---")
     st.header("🚓 Risk-Based Allocation of Police Officers")
 
-    # Create a fresh copy of ward_agg for allocation calculations
     ward_allocation_data = ward_agg.copy()
-    ward_allocation_data = ward_allocation_data.dropna(subset=['Ward code']).drop_duplicates(subset=['Ward code'])
+    ward_allocation_data = ward_allocation_data.dropna(subset=['Ward name']).drop_duplicates(subset=['Ward name'])
     
     # Determine which column to use for risk assessment
     allocation_agg_col = 'Burglary_Probability' if 'Burglary_Probability' in ward_allocation_data.columns else 'Predicted_Count'
@@ -913,10 +944,10 @@ if mode == "Ward":
     total_wards = len(ward_allocation_data)
 
     # Define cutoffs for 5 risk tiers
-    high_cutoff = int(total_wards * 0.10)  # Top 10%
-    med_high_cutoff = high_cutoff + int(total_wards * 0.05)  # Next 5%
-    medium_cutoff = med_high_cutoff + int(total_wards * 0.35)  # Next 35%
-    med_low_cutoff = medium_cutoff + int(total_wards * 0.05)  # Next 5%
+    high_cutoff = int(total_wards * 0.10)  
+    med_high_cutoff = high_cutoff + int(total_wards * 0.05)  
+    medium_cutoff = med_high_cutoff + int(total_wards * 0.35)  
+    med_low_cutoff = medium_cutoff + int(total_wards * 0.05) 
 
     # Assign risk categories and officers
     def assign_risk_and_officers(index):
@@ -955,7 +986,7 @@ if mode == "Ward":
 
     st.subheader("📊 Allocation Summary")
 
-    # Row 1: High-level stats
+
     row1_col1, row1_col2, row1_col3 = st.columns([1, 1, 1])
     with row1_col1:
         st.metric("Total Wards", f"{total_wards}")
@@ -966,7 +997,7 @@ if mode == "Ward":
 
     st.markdown("")
 
-    # Row 2: First three categories
+
     row2_col1, row2_col2, row2_col3 = st.columns([1, 1, 1])
     with row2_col1:
         st.metric("🔴 High Risk", f"{high_risk_wards} wards", f"{(high_risk_wards/total_wards)*100:.1f}%")
@@ -975,7 +1006,6 @@ if mode == "Ward":
     with row2_col3:
         st.metric("🟡 Medium", f"{medium_risk_wards} wards", f"{(medium_risk_wards/total_wards)*100:.1f}%")
 
-    # Row 3: Final two categories
     row3_col1, row3_col2 = st.columns([1, 1])
     with row3_col1:
         st.metric("🟢 Medium-Low", f"{med_low_risk_wards} wards", f"{(med_low_risk_wards/total_wards)*100:.1f}%")
@@ -984,7 +1014,6 @@ if mode == "Ward":
 
 
 
-    # Top allocation wards
     st.subheader("Highest Allocation Wards")
 
     top_wards = ward_allocation_data.nlargest(15, 'Officers_Allocated')[
@@ -1003,14 +1032,12 @@ if mode == "Ward":
     st.dataframe(top_wards_display, use_container_width=True, hide_index=True)
 
 
-    # Search for a specific ward
+
     st.subheader("🔍 Search Ward Allocation")
 
-    # Get list of ward names for dropdown
     ward_names = ward_allocation_data['Ward name'].sort_values().unique()
     selected_ward = st.selectbox("Select a Ward", ward_names)
 
-    # Display allocation details for the selected ward
     ward_info = ward_allocation_data[ward_allocation_data['Ward name'] == selected_ward]
 
     if not ward_info.empty:
@@ -1048,21 +1075,21 @@ if mode == "Ward":
     )
 
     # Implementation notes
-    with st.expander("ℹ️ Implementation and Justification"):
+    with st.expander("ℹ️ Implementation Notes"):
         st.markdown("""
                         
-        ### Police Deployment Strategy: **5 tier Allocation**
+        ### Police Deployment Strategy: **30 / 60 / 100 Model**
 
-        - We use a **five-tier allocation strategy** to assign officers based on predicted burglary risk at the ward level. 
+        - We use a **three-tier allocation strategy** to assign officers based on predicted burglary risk at the ward level. 
         - This strategy covers both practical policing approaches and insights from crime concentration research.
         - Allocation is scalable: Can be adjusted if more granular crime data or risk tiers are added.
-        - The model is simple and intuitive.
+        - Simple and intuitive.
             
         ---
 
         ### Allocation Logic
 
-        Wards are sorted by predicted burglary count, based on our predictive model. Based on this ranking, we divide wards into 5 categories to reflect levels of threat and vulnerability.
+        Wards are classified using predicted burglary counts and sorted into:
 
         - 🟥 **High Risk** (Top 10%) → **100 officers**
         - 🟠 **Medium-High Risk** (Next 5%) → **75 officers**
@@ -1071,7 +1098,6 @@ if mode == "Ward":
         - 🟩 **Low Risk** (Remaining 45%) → **30 officers**
 
         This multi-tiered strategy enables finer targeting of police resources, responding more precisely to risk gradation.
-        Extra officers in high-risk areas yield significantly greater reductions in crime than the same officers spread across more low-risk areas.
         It ensures officer resources are distributed proportionally to relative threat levels, while staying within the total available police force size (~34,000 officers across ~680 wards).
 
          ---
@@ -1083,76 +1109,4 @@ if mode == "Ward":
         - **Operational parallels**: NYPD's *Operation Impact*, Met's *Operation Bumblebee*, and West Midlands' *Impact Zones* followed similar focused-distribution patterns.
 
         """)
-    
-
-    # Add hotspot analysis section
-    st.markdown("---")
-    st.subheader("🔥 Ward-Level Risk Patterns")
-
-    try:
-        if 'Ward code' in gdf.columns and color_field in gdf.columns:
-            # Use ward_agg as the base dataset instead of gdf
-            risk_pattern_df = ward_agg.copy()
-            
-            # Ensure we have geometry for spatial analysis
-            risk_pattern_df = risk_pattern_df.merge(
-                gdf[['Ward name', 'geometry']].drop_duplicates(subset=['Ward name']), 
-                on='Ward name',
-                how='left'
-            )
-            
-            # Calculate risk patterns using ward_agg values
-            ward_values = risk_pattern_df[agg_col].fillna(0)
-            
-            # Compute Queen contiguity weights
-            w_ward = Queen.from_dataframe(risk_pattern_df)
-            
-            # Calculate risk levels with 5 tiers
-            risk_thresholds = ward_values.quantile([0.2, 0.4, 0.6, 0.8])
-            
-            # Add Own_Risk
-            risk_pattern_df['Own_Risk'] = pd.cut(
-                ward_values,
-                bins=[-float('inf'), 
-                      risk_thresholds[0.2], 
-                      risk_thresholds[0.4],
-                      risk_thresholds[0.6],
-                      risk_thresholds[0.8], 
-                      float('inf')],
-                labels=['Low', 'Low-Medium', 'Medium', 'Medium-High', 'High']
-            ).astype(str)
-            
-            # Calculate neighbor risk
-            neighbor_risks = []
-            for i in range(len(risk_pattern_df)):
-                neighbors = w_ward.neighbors[i]
-                if not neighbors:
-                    neighbor_risks.append('No neighbors')
-                else:
-                    neighbor_vals = ward_values.iloc[neighbors].mean()
-                    if neighbor_vals <= risk_thresholds[0.2]:
-                        neighbor_risks.append('Low')
-                    elif neighbor_vals <= risk_thresholds[0.4]:
-                        neighbor_risks.append('Low-Medium')
-                    elif neighbor_vals <= risk_thresholds[0.6]:
-                        neighbor_risks.append('Medium')
-                    elif neighbor_vals <= risk_thresholds[0.8]:
-                        neighbor_risks.append('Medium-High')
-                    else:
-                        neighbor_risks.append('High')
-
-            risk_pattern_df['Neighbor_Risk'] = neighbor_risks
-            risk_pattern_df['Risk_Pattern'] = risk_pattern_df['Own_Risk'] + '-' + risk_pattern_df['Neighbor_Risk']
-            
-            # Create display dataframe
-            display_df = (risk_pattern_df[['Ward name', agg_col, 'Own_Risk', 'Neighbor_Risk', 'Risk_Pattern']]
-                         .sort_values(agg_col, ascending=False)
-                         .reset_index(drop=True))
-            
-            # Display cluster analysis
-            st.subheader(f"Ward Risk Patterns (n={len(display_df)} wards)")
-            st.dataframe(display_df, use_container_width=True)
-            
-    except Exception as e:
-        st.error(f"Error in ward risk pattern analysis: {e}")
 
