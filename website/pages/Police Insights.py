@@ -12,31 +12,84 @@ import plotly.express as px
 import plotly.graph_objects as go
 from libpysal.weights import Queen
 
+st.set_page_config(page_title="Police Insights", layout="centered")
 
 st.markdown("""
-    <style>
-    /* Keep background light blue */
-    .stApp {
-        background-color: #eafafa !important;
-        color: #000000 !important;
-    }
+<style>
+/* Global background */
+.stApp {
+    background-color: #eafafa !important;
+    color: #000000 !important;
+}
 
-    /* Set text color for most widget elements */
-    .css-1cpxqw2, .css-ffhzg2, .css-1y4p8pa {
-        color: #000000 !important;
-    }
+/* Sidebar text color fix */
+section[data-testid="stSidebar"] .css-1d391kg,
+section[data-testid="stSidebar"] .css-qrbaxs {
+    color: white !important;
+}
 
-    /* Hide theme switcher */
-    [data-testid="theme-toggle"] {
-        display: none !important;
-    }
+/* Hide theme switcher */
+[data-testid="theme-toggle"] {
+    display: none !important;
+}
 
-    /* Ensure headings, captions, markdown text are black */
-    .css-qrbaxs, .css-1d391kg {
-        color: #000000 !important;
-    }
-    </style>
+/* Fix input and textarea fields */
+input, textarea {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #999 !important;
+}
+input::placeholder, textarea::placeholder {
+    color: #444 !important;
+}
+
+/* Fix button styling */
+button {
+    background-color: #007acc !important;
+    color: white !important;
+    border: none !important;
+}
+button:hover {
+    background-color: #005fa3 !important;
+}
+
+/* Markdown/text elements */
+.css-qrbaxs, .css-1d391kg, .css-10trblm, .css-1v0mbdj {
+    color: #000000 !important;
+}
+
+/* Expanders & container borders */
+.st-expander, .st-c1, .st-c2 {
+    border: 1px solid #bbb !important;
+    background-color: #f0fdfa !important;
+    color: #000 !important;
+}
+
+/* Improve light-on-light visibility inside colored boxes */
+div[style*="background-color: rgb(200, 245, 200)"],  /* Light green */
+div[style*="background-color: rgb(255, 220, 220)"],  /* Light red */
+div[style*="background-color: rgb(220, 220, 255)"] { /* Light blue */
+    color: #000 !important;
+}
+
+/* Fix high-risk dark red alert box text visibility */
+div[style*="background-color: #200000"] {
+    color: #fff !important;
+}
+
+/* Fix folium map container height */
+.folium-container,
+.folium-container > div,
+.folium-container iframe,
+.stFolium {
+    height: auto !important;
+    min-height: 0 !important;
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+}
+</style>
 """, unsafe_allow_html=True)
+
 
 
 def get_explanation(col, value):
@@ -129,39 +182,6 @@ def get_explanation(col, value):
     return explanations.get(col, "No detailed explanation available for this attribute.")
 
 
-st.set_page_config(page_title="Police Insights", layout="centered")
-st.markdown(
-    """
-    <style>
-      /* force folium container and its iframe to auto‐height */
-      .folium-container,
-      .folium-container > div,
-      .folium-container iframe {
-        height: auto !important;
-        min-height: 0 !important;
-        padding-bottom: 0 !important;
-        margin-bottom: 0 !important;
-      }
-      /* if Streamlit wraps it in a specific div, target that too */
-      .stFolium {
-        height: auto !important;
-        min-height: 0 !important;
-      }
-    </style>
-    """,
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    """
-    <style>
-    .stApp {
-        background-color: #eafafa;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
 
 PASSWORD = "police123"
 
