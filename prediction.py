@@ -5,76 +5,50 @@ import numpy as np
 from joblib import load
 from datetime import datetime
 import matplotlib.pyplot as plt
-import seaborn as sns
 from preprocessing import preprocess_data
 
 
 def determine_next_month(model_df):
     latest_month = model_df['Month'].max()
     if latest_month.month == 12:
-        next_month = pd.Timestamp(year=latest_month.year + 1, month=1, day=1)
-    else:
-        next_month = pd.Timestamp(year=latest_month.year, month=latest_month.month + 1, day=1)
-    return next_month
+        return pd.Timestamp(year=latest_month.year + 1, month=1, day=1)
+    return pd.Timestamp(year=latest_month.year, month=latest_month.month + 1, day=1)
 
 
 def prepare_next_month_data(model_df, next_month):
     lsoas = model_df['LSOA code'].unique()
-    next_month_df = pd.DataFrame({'LSOA code': lsoas})
-    next_month_df['Month'] = next_month
-    next_month_df['Year'] = next_month.year
+    next_df = pd.DataFrame({'LSOA code': lsoas})
+    next_df['Month'] = next_month
+    next_df['Year'] = next_month.year
 
-    # Last observed row per LSOA
-    latest_data = (
-        model_df
-        .sort_values('Month')
-        .groupby('LSOA code')
-        .last()
-        .reset_index()
+    latest = (
+        model_df.sort_values('Month')
+                .groupby('LSOA code').last().reset_index()
     )
+    exclude = ['LSOA code', 'Month', 'Burglary Count', 'Year', 'IMD Score']
+    const_feats = [c for c in latest.columns if c not in exclude]
+    feats_df = latest[['LSOA code'] + const_feats].drop_duplicates('LSOA code')
 
-    # Copy forward constant features (excluding only truly non-feature cols)
-    exclude_cols = [
-        'LSOA code', 'Month', 'Burglary Count', 'Year', 'IMD Score'
-    ]
-    constant_features = [c for c in latest_data.columns if c not in exclude_cols]
-    features_df = latest_data[['LSOA code'] + constant_features]
+    next_df = next_df.merge(feats_df, on='LSOA code', how='left', validate='many_to_one')
 
-    next_month_df = next_month_df.merge(
-        features_df,
-        on='LSOA code', how='left', validate='many_to_one'
-    )
+    for feat in ['Energy_All', 'Digital Propensity Score', 'PTAL']:
+        if feat in model_df.columns and feat in next_df.columns:
+            max_val = model_df[feat].max()
+            next_df[f"{feat}_rev"] = max_val - next_df[feat]
 
-    # Compute reversed features using training maxima
-    # (we know these were computed during training)
-    # Energy_All_rev
-    if 'Energy_All' in model_df.columns and 'Energy_All' in next_month_df.columns:
-        ea_max = model_df['Energy_All'].max()
-        next_month_df['Energy_All_rev'] = ea_max - next_month_df['Energy_All']
-    # Digital Propensity Score_rev
-    if 'Digital Propensity Score' in model_df.columns and 'Digital Propensity Score' in next_month_df.columns:
-        dp_max = model_df['Digital Propensity Score'].max()
-        next_month_df['Digital Propensity Score_rev'] = dp_max - next_month_df['Digital Propensity Score']
-    # PTAL_rev
-    if 'PTAL' in model_df.columns and 'PTAL' in next_month_df.columns:
-        ptal_max = model_df['PTAL'].max()
-        next_month_df['PTAL_rev'] = ptal_max - next_month_df['PTAL']
-
-    return next_month_df
+    return next_df
 
 
-def add_moving_averages_per_split(train, test, target_col='Burglary Count', windows=[3, 6]):
-    # same as training-time function
-    train = train.sort_values(['LSOA code', 'Month']).copy()
-    test = test.sort_values(['LSOA code', 'Month']).copy()
+def add_moving_averages_per_split(train_df, test_df, target='Burglary Count', windows=[3,6]):
+    train = train_df.sort_values(['LSOA code','Month']).copy()
+    test = test_df.sort_values(['LSOA code','Month']).copy()
     for w in windows:
-        col = f'{target_col}_MA{w}'
-        train[col] = train.groupby('LSOA code')[target_col].transform(
+        col = f"{target}_MA{w}"
+        train[col] = train.groupby('LSOA code')[target].transform(
             lambda x: x.shift(1).ewm(span=w, adjust=False).mean()
         )
-        last = train.groupby('LSOA code')[col].last()
-        test[col] = test['LSOA code'].map(last)
-    # spatial lag if present
+        last_vals = train.groupby('LSOA code')[col].last()
+        test[col] = test['LSOA code'].map(last_vals)
     if 'Burglary Count_SpatialLag1' in train.columns:
         last_sl = train.groupby('LSOA code')['Burglary Count_SpatialLag1'].last()
         test['Burglary Count_SpatialLag1'] = test['LSOA code'].map(last_sl)
@@ -85,60 +59,118 @@ def load_models(models_dir='models'):
     try:
         reg = load(os.path.join(models_dir, 'burglary_regressor.joblib'))
         clf = load(os.path.join(models_dir, 'burglary_classifier.joblib'))
-        features = load(os.path.join(models_dir, 'selected_features.joblib'))
-        return reg, clf, features
+        feats = load(os.path.join(models_dir, 'selected_features.joblib'))
+        return reg, clf, feats
     except Exception as e:
         print(f"Error loading models: {e}")
         sys.exit(1)
 
 
-def make_predictions(next_df, reg, clf, features):
-    # Ensure we have all columns
-    missing = [c for c in features if c not in next_df.columns]
+def make_predictions(df, reg, clf, feat_list):
+    missing = [c for c in feat_list if c not in df.columns]
     if missing:
-        raise ValueError(f"Missing features for prediction: {missing}")
+        raise ValueError(f"Missing features: {missing}")
+    X = df[feat_list].fillna(0)
+    df['Predicted_Count'] = np.maximum(0, reg.predict(X))
+    df['Burglary_Probability'] = clf.predict_proba(X)[:,1]
 
-    # Impute if necessary
-    X = next_df[features].fillna(0)
-
-    next_df['Predicted_Count'] = np.maximum(0, reg.predict(X))
-    next_df['Burglary_Probability'] = clf.predict_proba(X)[:, 1]
-
-    # Postcode-level join if available
     try:
         pc = pd.read_csv(
             'boundaries/PCD_OA21_LSOA21_MSOA21_LAD_NOV24_UK_LU.csv',
-            usecols=['pcds', 'lsoa21cd'], dtype=str, encoding='latin-1'
+            usecols=['pcds','lsoa21cd'], dtype=str, encoding='latin-1'
         )
         pc.rename(columns={'pcds':'Postcode','lsoa21cd':'LSOA code'}, inplace=True)
         pc = pc.dropna().drop_duplicates()
-        by_pc = next_df.merge(pc, on='LSOA code', how='left', validate='one_to_many')
-    except:
+        by_pc = df.merge(pc, on='LSOA code', how='left', validate='one_to_many')
+    except Exception:
         by_pc = None
-    return next_df, by_pc
+    return df, by_pc
 
 
 def save_and_visualize_predictions(pred_df, pred_pc, next_month, output_dir='data'):
     os.makedirs(output_dir, exist_ok=True)
     month_str = next_month.strftime('%B_%Y').lower()
 
-    # Risk levels
+    # Assign risk
     p = pred_df['Burglary_Probability']
     low, high = p.quantile(0.3), p.quantile(0.9)
-    def risk(x):
-        if x<=low: return 'Low'
-        if x>=high: return 'High'
-        return 'Medium'
-    pred_df['Risk_Level'] = pred_df['Burglary_Probability'].apply(risk)
+    pred_df['Risk_Level'] = pred_df['Burglary_Probability'].apply(
+        lambda x: 'Low' if x <= low else ('High' if x >= high else 'Medium')
+    )
 
-    # Save CSVs
+    # Compute custom IMD score
+    weights = {
+        'b. Income Deprivation Domain': 23.82,
+        'c. Employment Deprivation Domain': 23.82,
+        'e. Health Deprivation and Disability Domain': 7.15,
+        'd. Education, Skills and Training Domain': 7.15,
+        'g. Barriers to Housing and Services Domain': 5.91,
+        'h. Living Environment Deprivation Domain': 5.91,
+        'Digital Propensity Score_rev': 7.15,
+        'Energy_All_rev': 5.91,
+        'AvPTAI2015': 5.91,
+        'Mean Age': 7.15
+    }
+    valid_weights = {f: w for f, w in weights.items() if f in pred_df.columns}
+
+    # Normalize and scale
+    for feat, w in valid_weights.items():
+        mn, mx = pred_df[feat].min(), pred_df[feat].max()
+        scaled = f"{feat}_scaled"
+        if mx > mn:
+            pred_df[scaled] = (pred_df[feat] - mn) / (mx - mn)
+        else:
+            pred_df[scaled] = 0.0
+
+    norm_cols = [f + '_scaled' for f in valid_weights]
+    arr = np.array(list(valid_weights.values()))
+
+    # Ensure all scaled columns exist
+    for col in norm_cols:
+        if col not in pred_df.columns:
+            pred_df[col] = 0.0
+
+    # Compute IMD scores
+    pred_df['IMD_Custom_Score'] = pred_df[norm_cols].fillna(0).values.dot(arr)
+    pred_df['IMD_Custom_Score'] = pred_df['IMD_Custom_Score'].fillna(0)
+
+    pred_df['IMD_Custom_Rank'] = (
+        pred_df['IMD_Custom_Score']
+               .rank(method='dense', ascending=True)
+               .fillna(0)
+               .astype(int)
+    )
+
+    # Rescale to 1-10 and rank
+    min_raw, max_raw = pred_df['IMD_Custom_Score'].min(), pred_df['IMD_Custom_Score'].max()
+    if max_raw > min_raw:
+        pred_df['IMD_Final_1_to_10'] = 1 + 9 * (pred_df['IMD_Custom_Score'] - min_raw) / (max_raw - min_raw)
+    else:
+        pred_df['IMD_Final_1_to_10'] = 1.0
+
+    pred_df['IMD_Final_1_to_10'] = pred_df['IMD_Final_1_to_10'].fillna(1)
+    pred_df['IMD_Rank_from_Scaled10'] = (
+        pred_df['IMD_Final_1_to_10']
+               .rank(method='dense', ascending=True)
+               .astype(int)
+    )
+
+    # Save full dataframe with all IMD columns
+    all_cols = pred_df.columns.tolist()
+    imd_cols = ['IMD_Custom_Score', 'IMD_Custom_Rank', 'IMD_Final_1_to_10', 'IMD_Rank_from_Scaled10']
+    print("Columns written to CSV:", imd_cols)
+
     lsoa_file = os.path.join(output_dir, f"{month_str}_predictions_lsoa.csv")
-    pred_df.to_csv(lsoa_file, index=False)
-    print(f"Saved LSOA-level to {lsoa_file}")
+    pred_df.to_csv(lsoa_file, columns=all_cols, index=False)
+    print(f"LSOA-level predictions saved to {lsoa_file}")
+
+    pc_file = None
     if pred_pc is not None:
         pc_file = os.path.join(output_dir, f"{month_str}_predictions_postcode.csv")
         pred_pc.to_csv(pc_file, index=False)
-        print(f"Saved postcode-level to {pc_file}")
+        print(f"Postcode-level predictions saved to {pc_file}")
+
+    return lsoa_file, pc_file
 
 
 def main():
@@ -156,8 +188,9 @@ def main():
     next_df = prepare_next_month_data(hist, next_month)
     _, next_df = add_moving_averages_per_split(hist, next_df)
     reg, clf, feats = load_models()
-    pred_lsoa, pred_pc = make_predictions(next_df, reg, clf, feats)
-    save_and_visualize_predictions(pred_lsoa, pred_pc, next_month)
+    pred_df, pred_pc = make_predictions(next_df, reg, clf, feats)
+    save_and_visualize_predictions(pred_df, pred_pc, next_month)
+
 
 if __name__ == '__main__':
     main()

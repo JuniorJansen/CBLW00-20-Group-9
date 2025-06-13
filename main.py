@@ -112,7 +112,7 @@ def train_eval_models(df, save_models=True):
         'Digital Propensity Score', 'Energy_All', 'Mean Age', 'Custom_IMD_Score',
         'Male/Female Ratio', 'AvPTAI2015_rev', 'Digital Propensity Score_rev',
         'Energy_All_rev', 'Burglary Count_SpatailLag1', 'PTAL_rev', 'PTAL',
-        'AvPTAI2015', 'GIZ'
+        'AvPTAI2015', 'GIZ','Crime Domain','Female','Male', 'Crime Domain'
     ]
     features = [c for c in train.columns if c not in exclude]
     print(f"Number of features: {len(features)}")
@@ -157,7 +157,7 @@ def train_eval_models(df, save_models=True):
     clf = RandomForestClassifier(
         n_estimators=200,
         max_depth=20,
-        class_weight='balanced',
+        class_weight={0:1,1:1.2},
         random_state=42
     )
     clf.fit(X_train, y_train_c)
@@ -262,7 +262,7 @@ def main():
     print("Starting pipeline...")
 
     # File paths
-    BURGLARY_CSV = 'metropolitan_police_data.csv'
+    BURGLARY_CSV = 'data/metropolitan_police_data.csv'
     IMD_CSV = 'data/imd2019lsoa.csv'
     POP_CSV = 'data/population_summary.csv'
     ENERGY_XLSX = 'data/medianenergyefficiencyscoreenglandandwales.xlsx'

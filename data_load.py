@@ -49,7 +49,7 @@ months = set()
 locations = set()
 
 # Create empty output file
-with open("metropolitan_police_data.csv", "w") as f:
+with open("data/metropolitan_police_data.csv", "w") as f:
     pass  # Just create an empty file
 
 for i in range(0, len(all_files), chunk_size):

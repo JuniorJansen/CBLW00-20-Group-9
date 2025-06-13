@@ -95,11 +95,38 @@ def get_explanation(col, value):
         ),
         'Digital Propensity Score_rev': (
             "This reversed score flips the original digital score. Higher values now represent lower digital engagement, useful when modeling risk factors inversely."
+        ),
+        'IMD_Custom_Rank': (
+            "This shows the rank of the chosen LSOA by using our custom weights and ranking them with 1 being the least deprived LSOA."
         )
+
     }
     return explanations.get(col, "No detailed explanation available for this attribute.")
 
+
 st.set_page_config(page_title="Police Insights", layout="centered")
+st.markdown(
+    """
+    <style>
+      /* force folium container and its iframe to auto‐height */
+      .folium-container,
+      .folium-container > div,
+      .folium-container iframe {
+        height: auto !important;
+        min-height: 0 !important;
+        padding-bottom: 0 !important;
+        margin-bottom: 0 !important;
+      }
+      /* if Streamlit wraps it in a specific div, target that too */
+      .stFolium {
+        height: auto !important;
+        min-height: 0 !important;
+      }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 st.markdown(
     """
     <style>
@@ -140,7 +167,7 @@ else:
 @st.cache_data
 def load_predictions():
     try:
-        df = pd.read_csv("../data/march_2025_predictions_lsoa.csv")
+        df = pd.read_csv("../data/may_2025_predictions_lsoa.csv")
 
         if 'Year' in df.columns:
             try:
@@ -401,7 +428,7 @@ try:
             gdf['Cluster_Combo'] = np.nan
 
         # Use Risk_Level for coloring
-        color_field = 'Risk_Level'
+        color_field = 'Own_Risk'
 
         tooltip_field = 'Burglary_Probability'
         legend_label = 'Risk Level'
@@ -411,7 +438,7 @@ try:
         lsoa_names = gdf_base[['LSOA code', 'LSOA name']].drop_duplicates()
         df_display = df_filt.merge(lsoa_names, on='LSOA code', how='left')
         desired_cols = ['LSOA code', 'LSOA name']
-        for c in ['Predicted_Count', 'Burglary_Probability', 'Risk_Level', 'Own_Risk', 'Neighbor_Risk', 'Cluster_Combo']:
+        for c in ['Predicted_Count', 'Burglary_Probability',  'Own_Risk', 'Neighbor_Risk', 'Cluster_Combo','IMD_Custom_Rank']:
             if c in gdf.columns:
                 desired_cols.append(c)
         df_display = gdf[desired_cols].reset_index(drop=True)
@@ -687,7 +714,7 @@ try:
             )
         ).add_to(m)
 
-    map_data = st_folium(m, width=700, height=700, returned_objects=["last_clicked"])
+    map_data = st_folium(m, width=700, returned_objects=["last_clicked"])
 
     clicked = map_data.get('last_clicked')
     if clicked:
@@ -749,6 +776,7 @@ try:
                 'AvPTAI2015',
                 'Digital Propensity Score',
                 'Energy_All',
+                'IMD_Custom_Rank'
             ]
 
             col1, col2 = st.columns(2)
@@ -934,7 +962,7 @@ if mode == "Ward":
     st.header("🚓 Risk-Based Allocation of Police Officers")
 
     ward_allocation_data = ward_agg.copy()
-    ward_allocation_data = ward_allocation_data.dropna(subset=['Ward name']).drop_duplicates(subset=['Ward name'])
+    ward_allocation_data = ward_allocation_data.dropna(subset=['Ward code']).drop_duplicates(subset=['Ward code'])
     
     # Determine which column to use for risk assessment
     allocation_agg_col = 'Burglary_Probability' if 'Burglary_Probability' in ward_allocation_data.columns else 'Predicted_Count'
