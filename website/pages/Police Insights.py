@@ -13,34 +13,31 @@ import plotly.graph_objects as go
 from libpysal.weights import Queen
 
 
-st.markdown(
-    """
+st.markdown("""
     <style>
-    /* Force dark theme colors */
+    /* Keep background light blue */
     .stApp {
-        background-color: #0e1117 !important;
-        color: #ffffff !important;
+        background-color: #eafafa !important;
+        color: #000000 !important;
     }
 
-    /* Apply dark mode to widgets */
+    /* Set text color for most widget elements */
     .css-1cpxqw2, .css-ffhzg2, .css-1y4p8pa {
-        background-color: #262730 !important;
-        color: #ffffff !important;
+        color: #000000 !important;
     }
 
-    /* Hide Streamlit theme switcher UI */
+    /* Hide theme switcher */
     [data-testid="theme-toggle"] {
         display: none !important;
     }
 
-    /* General text fix */
+    /* Ensure headings, captions, markdown text are black */
     .css-qrbaxs, .css-1d391kg {
-        color: white !important;
+        color: #000000 !important;
     }
     </style>
-    """,
-    unsafe_allow_html=True
-)
+""", unsafe_allow_html=True)
+
 
 def get_explanation(col, value):
     try:

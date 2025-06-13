@@ -1,17 +1,35 @@
 import streamlit as st
 
 # Page setup
-st.set_page_config(page_title="London Burglary Predictor", layout="centered", page_icon="🔐")
 st.markdown("""
     <style>
     .stApp {
-        background-color: #eafafa;
+        background-color: #eafafa !important;
+        color: #000000 !important;
+    }
+
+    /* Text inside widgets */
+    .css-1cpxqw2, .css-ffhzg2, .css-1y4p8pa {
+        color: #000000 !important;
+    }
+
+    /* Hide Streamlit theme toggle */
+    [data-testid="theme-toggle"] {
+        display: none !important;
+    }
+
+    /* Ensure headers and captions are dark too */
+    .css-qrbaxs, .css-1d391kg {
+        color: #000000 !important;
     }
     </style>
 """, unsafe_allow_html=True)
+
+
 # Header
 st.title("🔐 London Burglary Risk Predictor")
 st.subheader("Estimate your LSOA’s burglary risk using data and machine learning.")
+
 
 st.markdown("---")
 

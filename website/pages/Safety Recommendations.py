@@ -3,34 +3,100 @@ import streamlit as st
 st.set_page_config(page_title="Safety Recommendations", layout="centered")
 
 # Background styling
-st.markdown(
-    """
-    <style>
-    /* Force dark theme colors */
-    .stApp {
-        background-color: #0e1117 !important;
-        color: #ffffff !important;
-    }
+st.markdown("""
+<style>
 
-    /* Apply dark mode to widgets */
-    .css-1cpxqw2, .css-ffhzg2, .css-1y4p8pa {
-        background-color: #262730 !important;
-        color: #ffffff !important;
-    }
+/* ─── Main App Background & Text ─── */
+.stApp {
+    background-color: #eafafa !important;
+    color: #000000 !important;
+}
 
-    /* Hide Streamlit theme switcher UI */
-    [data-testid="theme-toggle"] {
-        display: none !important;
-    }
+/* Headings, paragraphs, labels, etc. */
+h1, h2, h3, h4, h5, h6, p, label, span, div {
+    color: #000000 !important;
+}
 
-    /* General text fix */
-    .css-qrbaxs, .css-1d391kg {
-        color: white !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+/* ─── Inputs ─── */
+input[type="text"], textarea, .stTextInput > div > input {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #ccc !important;
+}
+
+/* Placeholder styling */
+input::placeholder, textarea::placeholder {
+    color: #444 !important;
+    opacity: 1 !important;
+}
+
+/* ─── Buttons ─── */
+button {
+    background-color: #007acc !important;
+    color: white !important;
+    border: none !important;
+    font-weight: bold !important;
+}
+
+button:hover {
+    background-color: #005fa3 !important;
+}
+
+/* ─── Metrics ─── */
+[data-testid="stMetricLabel"],
+[data-testid="stMetricValue"] {
+    color: #000000 !important;
+}
+
+/* ─── Alerts (success, warning, error, info) ─── */
+div[data-testid="stAlert"] {
+    color: #000000 !important;
+}
+
+div[data-testid="stAlert"] p,
+div[data-testid="stAlert"] div {
+    color: #000000 !important;
+}
+
+/* Optional: Custom light success background (optional override of default green) */
+/*
+div[data-testid="stAlert"][class*="stAlert-success"] {
+    background-color: #d0f0d0 !important;
+}
+*/
+
+/* ─── Hide Theme Switch ─── */
+[data-testid="theme-toggle"] {
+    display: none !important;
+}
+
+/* ─── Sidebar Styling ─── */
+section[data-testid="stSidebar"] {
+    background-color: #1e1e1e !important;
+    color: white !important;
+}
+section[data-testid="stSidebar"] * {
+    color: white !important;
+}
+
+/* ─── Expanders ─── */
+div[data-testid="stExpander"] {
+    border: 1px solid #999 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+div[data-testid="stExpander"] > details > summary {
+    font-weight: bold !important;
+    color: #000000 !important;
+}
+div[data-testid="stExpander"] > details {
+    background-color: #f9f9f9 !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+
 
 st.title("🛡️ Safety Recommendations")
 st.markdown("Protect yourself and your community with these strategies.")
@@ -40,13 +106,7 @@ st.markdown("---")
 # High-Risk Area Recommendations
 st.header("❗High-Risk Area Recommendations")
 st.markdown("""
-<div style="
-    border: 2px solid #ff4b4b;
-    background-color: #331111;
-    padding: 1rem;
-    border-radius: 10px;
-    color: #ffffff;
-">
+<div style="border: 2px solid red; background-color: #ffe6e6; padding: 1rem; border-radius: 10px; color: #000;">
 <b>Living in or near a high-risk area?</b> Here are more drastic recommendations to reduce possibility of burglary if your area is in the top risk bracket as identified by our model.
 </div>
 """, unsafe_allow_html=True)
