@@ -1,0 +1,16 @@
+pandas==2.2.2
+numpy==1.26.4
+matplotlib==3.8.4
+seaborn==0.13.2
+geopandas==1.1.0
+scikit-learn==1.4.2
+joblib==1.4.2
+streamlit==1.45.0
+shapely==2.0.3
+folium==0.16.0
+libpysal==4.10.0
+esda==2.5.0
+plotly==5.18.0
+streamlit_folium==0.10.0
+tqdm==4.66.1
+openpyxl
