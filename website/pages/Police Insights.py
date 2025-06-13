@@ -11,6 +11,34 @@ from difflib import get_close_matches
 import plotly.express as px
 import plotly.graph_objects as go
 
+st.markdown(
+    """
+    <style>
+    /* Force dark theme colors */
+    .stApp {
+        background-color: #0e1117 !important;
+        color: #ffffff !important;
+    }
+
+    /* Apply dark mode to widgets */
+    .css-1cpxqw2, .css-ffhzg2, .css-1y4p8pa {
+        background-color: #262730 !important;
+        color: #ffffff !important;
+    }
+
+    /* Hide Streamlit theme switcher UI */
+    [data-testid="theme-toggle"] {
+        display: none !important;
+    }
+
+    /* General text fix */
+    .css-qrbaxs, .css-1d391kg {
+        color: white !important;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 def get_explanation(col, value):
     # Attempt to convert to float; if it fails, treat as “missing” or “N/A”

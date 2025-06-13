@@ -6,8 +6,26 @@ st.set_page_config(page_title="Safety Recommendations", layout="centered")
 st.markdown(
     """
     <style>
+    /* Force dark theme colors */
     .stApp {
-        background-color: #eafafa;
+        background-color: #0e1117 !important;
+        color: #ffffff !important;
+    }
+
+    /* Apply dark mode to widgets */
+    .css-1cpxqw2, .css-ffhzg2, .css-1y4p8pa {
+        background-color: #262730 !important;
+        color: #ffffff !important;
+    }
+
+    /* Hide Streamlit theme switcher UI */
+    [data-testid="theme-toggle"] {
+        display: none !important;
+    }
+
+    /* General text fix */
+    .css-qrbaxs, .css-1d391kg {
+        color: white !important;
     }
     </style>
     """,
@@ -22,7 +40,13 @@ st.markdown("---")
 # High-Risk Area Recommendations
 st.header("❗High-Risk Area Recommendations")
 st.markdown("""
-<div style="border: 2px solid #ff4b4b; background-color: #ffe6e6; padding: 1rem; border-radius: 10px;">
+<div style="
+    border: 2px solid #ff4b4b;
+    background-color: #331111;
+    padding: 1rem;
+    border-radius: 10px;
+    color: #ffffff;
+">
 <b>Living in or near a high-risk area?</b> Here are more drastic recommendations to reduce possibility of burglary if your area is in the top risk bracket as identified by our model.
 </div>
 """, unsafe_allow_html=True)
