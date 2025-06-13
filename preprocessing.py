@@ -28,11 +28,27 @@ weights = {
 
 def load_london_lsoas(path: str) -> pd.Series:
     """
-    Load London LSOA codes from CSV with column 'lsoa_code'.
-    Returns a Series of LSOA codes.
+    Read a GeoJSON of London LSOA boundaries, exclude City of London,
+    and return unique 'lsoa21cd's.
     """
-    df = pd.read_csv(path, usecols=['lsoa_code'], encoding='utf-8')
-    return df['lsoa_code']
+    gdf = gpd.read_file(path)
+
+    # 1) Exclude by Local Authority name
+    if 'lad22nm' in gdf.columns:
+        gdf = gdf[gdf['lad22nm'] != 'City of London']
+    elif 'LAD22NM' in gdf.columns:
+        gdf = gdf[gdf['LAD22NM'] != 'City of London']
+
+    # 2) Also drop any LSOAs whose own name indicates City of London
+    if 'lsoa21nm' in gdf.columns:
+        mask = ~gdf['lsoa21nm'].str.contains('City of London', case=False, na=False)
+        gdf = gdf[mask]
+
+    if 'lsoa21cd' not in gdf.columns:
+        raise KeyError("GeoJSON missing 'lsoa21cd' field")
+
+    return pd.Series(gdf['lsoa21cd'].unique())
+
 
 def load_burglary_data(path: str) -> pd.DataFrame:
     """

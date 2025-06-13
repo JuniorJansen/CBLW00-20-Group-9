@@ -114,22 +114,40 @@ If you want to learn more about these factors and the data used:
 - [Age](https://www.ons.gov.uk/peoplepopulationandcommunity/crimeandjustice/articles/overviewofburglaryandotherhouseholdtheft/englandandwales?utm_source=chatgpt.com)
 """)
 
-# Model Explanation
 with st.expander("🤖 How Our Model Works"):
     st.markdown("""
-We trained a **Random Forest Classifier** on monthly burglary data at the LSOA level, enhanced with our custom deprivation index databases.
+We use a **two-model Random Forest approach** to predict burglary risk across London. This helps us understand both the likelihood of a burglary happening and how many burglaries we expect to occur in specific areas in the following month.
 
-### Why Random Forest?
-- Handles complex interactions between variables
-- Resistant to overfitting
-- Provides interpretable feature importance scores
+- **Random Forest Regression**: Estimates the expected *number* of burglaries for each area (LSOA).
+- **Random Forest Classification**: Predicts the *probability* that a burglary will happen in a given area.
 
-We also tested:
-- Linear Regression  
-- Ridge & Lasso (regularization)  
-- Logistic Regression
+---
 
-But Random Forest offered the best trade-off between accuracy and interpretability.
+### 🔍 Why Random Forest?
+
+In our search for the best prediciton outcome, we tested of models:
+
+- **Random Forest**
+- **XGBoost**
+- **Gradient Boosting**
+- **LightGBM**
+
+After testing these models, we decided to use **Random Forest**:
+
+- Strong performance on both prediction tasks  
+- Robust to overfitting (doesn’t memorize the training data)  
+- Clear insights into which factors matter most  
+- Allows us to adjust the model to focus more on safety
+
+---
+
+### 🚨 Built-In Ethical Safeguards
+
+We also introduced an ethical safeguard by adjusting the model to favor overestimating burglary risks slightly.
+
+> **Why?** It’s better to **overestimate risk** and allocate resources preemptively than to **underestimate** and leave areas vulnerable.
+
+This decision aligns with our priority of public safety and preventive policing.
 """)
 
 # Privacy & Ethics
@@ -139,16 +157,24 @@ with st.expander("🔐 Privacy & Ethical Considerations"):
 
     ### ✅ Data Privacy
     - No personal or individual-level data is used.
-    - Predictions are exclusively made at the neighborhood (LSOA) level.
-    - We have used the London's Police anonymisation procedure to ensure nobody's privacy is violated. The latitude and longitude locations of incidents reported always represent the approximate location of a crime — not the exact place that it happened
+    - Predictions are made only at the neighborhood (LSOA) level to avoid identifying individuals or properties.
+    - We have used the London's Police anonymisation procedure to ensure nobody's privacy is violated. The latitude and longitude locations of incidents reported always represent the approximate location of a crime — not the exact place that it happened.
+    - Data is processed and stored securely. No personally identifiable information is ever retained.
     - [Read more about anonymisation here.](https://data.police.uk/about/#anonymisation)
 
     ### ✅ Transparency
     - This page provides full visibility into our data sources, databases and modeling techniques.
+    - We explain both the capabilities **and** the limitations of our model.
     - Users can explore how various factors influence local risk scores.
 
     ### ✅ Fairness & Accountability
-    - We acknowledge the potential for area-based models to inadvertently stigmatize communities. However, our objective is **not to rank individuals**, but to support informed, equitable prevention strategies at the local level.
+    - We acknowledge the potential for area-based models to stigmatize communities. However, our objective is **not to rank individuals**, but to support informed, equitable prevention strategies at a local level.
+    - We added new domains like **Digital Exclusion**, **Transport Access**, and **Climate Vulnerability** to reflect real-world risks, not enforcement patterns.
+
+    ### ✅ Intended Use & Misuse Prevention
+    - Predictions are not absolute — they represent **probabilities**, not guarantees.
+    - We do not label areas as "dangerous". Instead, we highlight relative ris and suggest appropriate prevention strategies.
+    - Risk scores are always shown alongside safety tips, giving residents proactive tools, not fear.
     """)
 
 
