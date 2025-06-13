@@ -4,34 +4,81 @@ import pandas as pd
 import os 
 import math
 
-st.markdown(
-    """
-    <style>
-    /* Force dark theme colors */
-    .stApp {
-        background-color: #0e1117 !important;
-        color: #ffffff !important;
-    }
+st.markdown("""
+<style>
 
-    /* Apply dark mode to widgets */
-    .css-1cpxqw2, .css-ffhzg2, .css-1y4p8pa {
-        background-color: #262730 !important;
-        color: #ffffff !important;
-    }
+/* Main background and base font color */
+.stApp {
+    background-color: #eafafa !important;
+    color: #000000 !important;
+}
 
-    /* Hide Streamlit theme switcher UI */
-    [data-testid="theme-toggle"] {
-        display: none !important;
-    }
+/* Text styling for titles, markdown, etc. */
+h1, h2, h3, h4, h5, h6, p, label, span, div {
+    color: #000000 !important;
+}
 
-    /* General text fix */
-    .css-qrbaxs, .css-1d391kg {
-        color: white !important;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True
-)
+/* Inputs */
+input[type="text"], textarea, .stTextInput > div > input {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+    border: 1px solid #ccc !important;
+}
+
+/* Placeholder text */
+input::placeholder, textarea::placeholder {
+    color: #444 !important;
+    opacity: 1 !important;
+}
+
+/* Buttons */
+button {
+    background-color: #007acc !important;
+    color: white !important;
+    border: none !important;
+    font-weight: bold !important;
+}
+
+button:hover {
+    background-color: #005fa3 !important;
+}
+
+/* Metric labels and values */
+[data-testid="stMetricLabel"],
+[data-testid="stMetricValue"] {
+    color: #000000 !important;
+}
+
+/* Alerts */
+.stAlert {
+    color: #000000 !important;
+}
+
+/* Hide theme toggle */
+[data-testid="theme-toggle"] {
+    display: none !important;
+}
+
+/* ───── Sidebar Styling Fix ───── */
+
+/* Sidebar panel background */
+section[data-testid="stSidebar"] {
+    background-color: #1e1e1e !important;
+    color: white !important;
+}
+
+/* Sidebar text */
+section[data-testid="stSidebar"] * {
+    color: white !important;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
+
+
+
+
  
 current_dir = os.path.dirname(__file__)  # Gets path 
 file_path_pred = os.path.join(current_dir, "march_2025_predictions_postcode.csv")
