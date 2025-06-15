@@ -1191,3 +1191,53 @@ if mode == "Ward":
 
         """)
 
+    with st.expander("🕒 Future Work: Patrol Time Strategy & Officer Presence"):
+        st.markdown("""
+        
+        - **Burglary is not random** — it’s concentrated in hotspots and follows predictable times based on our research.
+        - Research shows that **focused, visible patrols in high-risk zones** can cut burglary by up to **20%** (Braga et al., 2014).
+        - The **“Koper Curve”** indicates that **10–15 minutes** of police presence in a hotspot has the greatest residual deterrent effect.
+
+        ---
+        
+        ### ⏳ Officer Availability Assumptions
+
+        - Officers are on duty **daily from 06:00 to 22:00** (16 hours).
+        - Officers are available for burglary-focused patrols for 2 hours on 4 days per week.
+        - Total available patrol window per ward:  
+        **16 hours × 7 days = 112 hours per week**
+
+        ---
+        
+        ### 🧮 How Officer Presence is Calculated
+
+        We align officer availability with our **5-tier risk model**. Based on how many hours are allocated to each ward, we compute the **average number of officers present per hour**, ensuring sufficient coverage for deterrence without over-policing.
+
+        | Risk Tier         | Weekly Patrol Hours | Avg. Officers Active (per hour) |
+        |-------------------|---------------------|-------------------------------|
+        | 🟥 High Risk       | 800 hrs             | ~7 officers                   |
+        | 🟠 Medium-High     | 600 hrs             | ~5 officers                   |
+        | 🟡 Medium          | 480 hrs             | ~4 officers                   |
+        | 🟢 Medium-Low      | 360 hrs             | ~3 officers                   |
+        | 🟩 Low Risk        | 240 hrs             | ~2 officers                   |
+
+        ✅ Even **low-risk wards** maintain a **base presence of 2 officers** per hour — critical for visibility, public confidence, and response capability.
+
+        ---
+        
+        ### 📆 How Patrols Are Conducted
+
+        - Patrols are broken into short, 15-minute bursts.
+        - Officers rotate through **micro-hotspots** within wards.
+        - Patrol **times vary across days**, to avoid predictability by potential offenders.
+        - **Peak patrol times** include:
+        - Weekday late morning & early afternoon (when homes are empty e.g., 10:00–14:00)
+        - Evenings after sunset (when visibility is low and burglary risk rises e.g., 17:00–21:00)
+
+        ---
+        
+        By combining our model with real-world scheduling principles, we aim to research and deliver a safer, fairer, and smarter policing system across London.
+        """)
+
+
+
