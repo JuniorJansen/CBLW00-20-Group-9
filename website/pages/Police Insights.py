@@ -1194,7 +1194,7 @@ if mode == "Ward":
     with st.expander("🕒 Future Work: Patrol Time Strategy & Officer Presence"):
         st.markdown("""
         
-        - **Burglary is not random** — it’s concentrated in hotspots and follows predictable times based on our research.
+        - Burglary is concentrated in hotspots and follows predictable times based on our research.
         - Research shows that **focused, visible patrols in high-risk zones** can cut burglary by up to **20%** (Braga et al., 2014).
         - The **“Koper Curve”** indicates that **10–15 minutes** of police presence in a hotspot has the greatest residual deterrent effect.
 
@@ -1202,7 +1202,7 @@ if mode == "Ward":
         
         ### ⏳ Officer Availability Assumptions
 
-        - Officers are on duty **daily from 06:00 to 22:00** (16 hours).
+        - We can schedule burglary duty **daily from 06:00 to 22:00** (16 hours).
         - Officers are available for burglary-focused patrols for 2 hours on 4 days per week.
         - Total available patrol window per ward:  
         **16 hours × 7 days = 112 hours per week**
@@ -1229,7 +1229,6 @@ if mode == "Ward":
 
         - Patrols are broken into short, 15-minute bursts.
         - Officers rotate through **micro-hotspots** within wards.
-        - Patrol **times vary across days**, to avoid predictability by potential offenders.
         - **Peak patrol times** include:
         - Weekday late morning & early afternoon (when homes are empty e.g., 10:00–14:00)
         - Evenings after sunset (when visibility is low and burglary risk rises e.g., 17:00–21:00)
