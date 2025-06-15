@@ -1010,7 +1010,7 @@ if mode == "Ward":
     ward_allocation_data = ward_allocation_data.dropna(subset=['Ward code']).drop_duplicates(subset=['Ward code'])
     
     # Determine which column to use for risk assessment
-    allocation_agg_col = 'Burglary_Probability' if 'Burglary_Probability' in ward_allocation_data.columns else 'Predicted_Count'
+    allocation_agg_col = 'Predicted_Count'
     
     # Sort wards by risk metric and assign risk categories
     ward_allocation_data = ward_allocation_data.sort_values(by=allocation_agg_col, ascending=False).reset_index(drop=True)
@@ -1148,13 +1148,14 @@ if mode == "Ward":
     )
 
     # Implementation notes
-    with st.expander("ℹ️ Implementation Notes"):
+    with st.expander("ℹ️ Implementation and Justification"):
         st.markdown("""
                         
-        ### Police Deployment Strategy: **30 / 60 / 100 Model**
+        ### Police Deployment Strategy: **5-Tier Allocation Model**
 
-        - We use a **three-tier allocation strategy** to assign officers based on predicted burglary risk at the ward level. 
+        - We use a five-tier allocation strategy to assign officers based on the predicted burglary numbers that would occur at the ward level in a month. 
         - This strategy covers both practical policing approaches and insights from crime concentration research.
+        - We maintain a base presence even in the safest communities to uphold trust and fairness.
         - Allocation is scalable: Can be adjusted if more granular crime data or risk tiers are added.
         - Simple and intuitive.
             
@@ -1170,16 +1171,23 @@ if mode == "Ward":
         - 🟢 **Medium-Low Risk** (Next 5%) → **45 officers**
         - 🟩 **Low Risk** (Remaining 45%) → **30 officers**
 
-        This multi-tiered strategy enables finer targeting of police resources, responding more precisely to risk gradation.
-        It ensures officer resources are distributed proportionally to relative threat levels, while staying within the total available police force size (~34,000 officers across ~680 wards).
+        We originally used a **3-tier model** (*Low*, *Medium*, *High*), but found that the discrete jumps between allocation levels (from 30 → 60 → 100 officers) were too abrupt — especially for wards falling near the boundaries between tiers.
 
-         ---
+        To improve the fairness and realism of deployment, we introduced two **intermediate tiers** — **Medium-High** and **Medium-Low** — which help ease the transition in officer numbers between risk levels.
+
+        This results in a more radual, proportional, and data-informed gradient of policing effort that better reflects the continuous nature of crime risk across London’s wards, while staying within the total available police force size (~34,000 officers across ~680 wards).
+
+        ---
 
         ### Academic & Policy Support
 
-        - **Crime concentration theory**: 5–10% of areas account for the majority of urban crimes
+        - **Crime concentration theory**: 5–10% of areas account for the majority of urban crimes.
         - **Problem-oriented policing**: Focusing on high-need areas produces higher crime reduction per officer deployed (College of Policing, 2022)
         - **Operational parallels**: NYPD's *Operation Impact*, Met's *Operation Bumblebee*, and West Midlands' *Impact Zones* followed similar focused-distribution patterns.
+                    
+        ---
+
+        ### Allocation times and Future Work
 
         """)
 
