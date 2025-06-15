@@ -287,7 +287,7 @@ except Exception as e:
 def load_lsoa_boundaries():
     """Load and preprocess LSOA boundaries from GeoJSON"""
     try:
-        geojson_file = "../boundaries/london_lsoa.geojson"
+        geojson_file = "../boundaries/london_lsoa_shapefile/london_lsoa.shp"
 
         if not os.path.exists(geojson_file):
             st.error(f"GeoJSON file not found: {geojson_file}")

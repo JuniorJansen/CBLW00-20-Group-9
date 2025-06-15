@@ -21,7 +21,7 @@ from sklearn.impute import SimpleImputer
 
 from joblib import dump
 from preprocessing import preprocess_data
-
+from prediction import predict_next_month_from_history
 weights = {
 'b. Income Deprivation Domain': 23.82,
 'c. Employment Deprivation Domain': 23.82,
@@ -146,9 +146,10 @@ def train_eval_models(df, save_models=True):
     rmse = np.sqrt(mean_squared_error(y_test_r, preds_r))
     mae = mean_absolute_error(y_test_r, preds_r)
     r2 = r2_score(y_test_r, preds_r)
-    print(f"RMSE: {rmse:.2f}, MAE: {mae:.2f}, RÂ²: {r2:.3f}")
+    print(f"RMSE: {rmse:.2f}, MAE: {mae:.2f}, R²: {r2:.3f}")
 
     if save_models:
+        os.makedirs('models', exist_ok=True)
         dump(reg, 'models/burglary_regressor.joblib')
         print("Saved RandomForest regression model to models/burglary_regressor.joblib")
 
@@ -268,7 +269,7 @@ def main():
     ENERGY_XLSX = 'data/medianenergyefficiencyscoreenglandandwales.xlsx'
     MAPPING_CSV = 'data/PCD_OA21_LSOA21_MSOA21_LAD_NOV24_UK_LU.csv'
     PTAL_CSV = 'data/LSOA2011 AvPTAI2015.csv'
-    LONDON_LSOA = 'boundaries/london_lsoa.geojson'
+    LONDON_LSOA = 'boundaries/london_lsoa_shapefile/london_lsoa.shp'
     DIGITAL_XLSX = 'data/digitalpropensityindexlsoas.xlsx'
 
     try:
@@ -302,7 +303,7 @@ def main():
         )
     except Exception as e:
         print(f"WARNING: Error during visualization: {e}")
-
+    predict_next_month_from_history(df)
     print("Analysis complete.")
 
 
