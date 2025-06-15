@@ -1,13 +1,12 @@
 # CBLW00-20-Group-9
 
-For running the code first download the data from https://data.police.uk/data/ download all the data from 2010 onwards and put it in a folder called data, 
+For running the code first download the data from https://data.police.uk/data/ download all the data from April 2021 onwards and put it in a folder called data, 
 to get it in our format. Run data_load.py to create a csv that only contains burglary data from the MPS.
 
 
-To download our external datasets, we advise you to download this zip file and but all the files into the data folder.
-Using this you can first run main.py. This will train the model and then save the weights.
-
-After that it's possbile to run prediction.py which will give you the needed csv files to run our website and create the visualisations.
+To download our external datasets, we advise you to download this zip file and put all the files into the data folder.
+Using this you can first run main.py. This will allow you to run the main.py file and train the model.
+https://drive.google.com/file/d/1Q0jjHlCjyyd9ude2LTwQIAAa5qVoajTf/view?usp=drive_link
 
 
 
