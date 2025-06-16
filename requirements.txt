@@ -1,8 +1,9 @@
 pandas==2.2.2
 numpy==1.26.4
+scipy==1.13.1
 matplotlib==3.8.4
 seaborn==0.13.2
-geopandas==1.1.0
+geopandas==0.14.3
 scikit-learn==1.4.2
 joblib==1.4.2
 streamlit==1.45.0
