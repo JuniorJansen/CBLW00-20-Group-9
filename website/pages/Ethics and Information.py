@@ -94,13 +94,6 @@ for root, dirs, files in os.walk("."):
         if file.lower() == "imd.png":
             found_paths.append(os.path.join(root, file))
 
-if found_paths:
-    st.success(f"Found IMD.png at:\n\n{found_paths}")
-    # Optionally display the first one found
-    st.image(found_paths[0], caption="Auto-detected IMD.png", use_container_width=True)
-else:
-    st.error("❌ 'IMD.png' not found in any subdirectory.")
-
 
 st.markdown("---")
 
@@ -123,11 +116,7 @@ with st.expander("📊 What Are IMD Scores?"):
     """)
 
     with st.container():
-        st.image(
-            "pages/IMD.png", 
-            caption="IMD Domains and Their Indicators", 
-            use_container_width=True
-        )
+        st.image(found_paths[0], caption="Auto-detected IMD.png", use_container_width=True)
 
     st.markdown("""
     **If you want to learn more about the IMDs:**
