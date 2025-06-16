@@ -1,4 +1,5 @@
 import streamlit as st
+import os
 
 st.set_page_config(page_title="Ethics & Model Info", layout="centered")
 st.title("🔍 Ethics & Model Transparency")
@@ -87,7 +88,18 @@ div[data-testid="stExpander"] > details {
 </style>
 """, unsafe_allow_html=True)
 
+found_paths = []
+for root, dirs, files in os.walk("."):
+    for file in files:
+        if file.lower() == "imd.png":
+            found_paths.append(os.path.join(root, file))
 
+if found_paths:
+    st.success(f"Found IMD.png at:\n\n{found_paths}")
+    # Optionally display the first one found
+    st.image(found_paths[0], caption="Auto-detected IMD.png", use_container_width=True)
+else:
+    st.error("❌ 'IMD.png' not found in any subdirectory.")
 
 
 st.markdown("---")

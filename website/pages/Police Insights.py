@@ -11,6 +11,7 @@ from difflib import get_close_matches
 import plotly.express as px
 import plotly.graph_objects as go
 from libpysal.weights import Queen
+import os
 
 st.set_page_config(page_title="Police Insights", layout="centered")
 
@@ -90,7 +91,7 @@ div[style*="background-color: #200000"] {
 </style>
 """, unsafe_allow_html=True)
 
-
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 def get_explanation(col, value):
     try:
@@ -212,8 +213,8 @@ else:
 @st.cache_data
 def load_predictions():
     try:
-        df = pd.read_csv("../data/may_2025_predictions_lsoa.csv")
-
+        path = os.path.join(BASE_DIR, "data", "may_2025_predictions_lsoa.csv")
+        df = pd.read_csv(path)
         if 'Year' in df.columns:
             try:
                 if df['Year'].dtype == 'object' and df['Year'].astype(str).str.contains('-', na=False).any():
@@ -287,7 +288,7 @@ except Exception as e:
 def load_lsoa_boundaries():
     """Load and preprocess LSOA boundaries from GeoJSON"""
     try:
-        geojson_file = "../boundaries/london_lsoa_shapefile/london_lsoa.shp"
+        geojson_file = os.path.join(BASE_DIR, "boundaries", "london_lsoa_shapefile", "london_lsoa.shp")
 
         if not os.path.exists(geojson_file):
             st.error(f"GeoJSON file not found: {geojson_file}")
@@ -351,7 +352,7 @@ def load_lsoa_boundaries():
 def load_ward_boundaries():
     """Load and preprocess Ward boundaries"""
     try:
-        shp_ward = "../boundaries/London_Wards_2024.shp"
+        shp_ward = os.path.join(BASE_DIR, "boundaries", "London_Wards_2024.shp")
 
         if not os.path.exists(shp_ward):
             st.error(f"Ward shapefile not found: {shp_ward}")
@@ -369,7 +370,7 @@ def load_ward_boundaries():
 def load_lsoa_ward_mapping():
     """Load LSOA to Ward mapping with improved error handling"""
     try:
-        map_file = "../data/LSOA_(2021)_to_Electoral_Ward_(2024)_to_LAD_(2024)_Best_Fit_Lookup_in_EW.csv"
+        map_file = os.path.join(BASE_DIR, "data", "LSOA_(2021)_to_Electoral_Ward_(2024)_to_LAD_(2024)_Best_Fit_Lookup_in_EW.csv")
 
         if not os.path.exists(map_file):
             st.error(f"Mapping file not found: {map_file}")
