@@ -91,7 +91,7 @@ div[style*="background-color: #200000"] {
 </style>
 """, unsafe_allow_html=True)
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
 def get_explanation(col, value):
     try:
