@@ -733,7 +733,7 @@ try:
             else:
                 neighbor_vals = ward_values.iloc[neighbors].mean()
                 if neighbor_vals <= risk_thresholds[0.2]:
-                    neighbor_risks.append('Vert Low')
+                    neighbor_risks.append('Very Low')
                 elif neighbor_vals <= risk_thresholds[0.4]:
                     neighbor_risks.append('Low')
                 elif neighbor_vals <= risk_thresholds[0.6]:
