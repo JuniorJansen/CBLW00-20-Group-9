@@ -23,11 +23,17 @@ st.markdown("""
     color: #000000 !important;
 }
 
-/* Sidebar text color fix */
-section[data-testid="stSidebar"] .css-1d391kg,
-section[data-testid="stSidebar"] .css-qrbaxs {
-    color: white !important;
+/* Sidebar panel background */
+section[data-testid="stSidebar"] {
+    background-color: #ffffff !important;
+    color: #000000 !important;
 }
+
+/* Sidebar text */
+section[data-testid="stSidebar"] * {
+    color: #000000 !important;
+}
+
 
 /* Hide theme switcher */
 [data-testid="theme-toggle"] {

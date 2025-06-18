@@ -70,14 +70,17 @@ div[data-testid="stAlert"][class*="stAlert-success"] {
     display: none !important;
 }
 
-/* ─── Sidebar Styling ─── */
+/* Sidebar panel background */
 section[data-testid="stSidebar"] {
-    background-color: #1e1e1e !important;
-    color: white !important;
+    background-color: #ffffff !important;
+    color: #000000 !important;
 }
+
+/* Sidebar text */
 section[data-testid="stSidebar"] * {
-    color: white !important;
+    color: #000000 !important;
 }
+
 
 /* ─── Expanders ─── */
 div[data-testid="stExpander"] {
