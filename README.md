@@ -1,9 +1,15 @@
 # CBLW00-20-Group-9
-
+Firstly we suggest making a conda environment and downloading our requirements.txt file to get all the packages needed to run our code by running the command: 
+```bash
+pip install -r requirements.txt
+```
 For running the code first download the data from https://data.police.uk/data/ download all the data from April 2021 onwards and put it in a folder called data, 
 to get it in our format. Run data_load.py to create a csv that only contains burglary data from the MPS.
 
-
+To run our website, use the command:
+```bash
+streamlit run website/Home.py
+```
 To download our external datasets, we advise you to download this zip file and put all the files into the data folder.
 Using this you can first run main.py. This will allow you to run the main.py file and train the model.
 https://drive.google.com/file/d/1Q0jjHlCjyyd9ude2LTwQIAAa5qVoajTf/view?usp=drive_link
