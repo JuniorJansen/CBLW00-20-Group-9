@@ -29,8 +29,8 @@ weights = {
 'd. Education, Skills and Training Domain': 7.15,
 'g. Barriers to Housing and Services Domain': 5.91,
 'h. Living Environment Deprivation Domain': 5.91,
-'Digital Propensity Score_rev': 7.15,
-'Energy_All_rev': 5.91,
+'Digital Propensity Score': 7.15,
+'Energy_All': 5.91,
 'AvPTAI2015': 5.91
 }
 
@@ -88,14 +88,6 @@ def train_eval_models(df, save_models=True):
         train, test, target_col='Burglary Count', windows=[3, 6]
     )
 
-    # Reverse transformations for specific features
-    for subset in (train, test):
-        subset['PTAL_rev'] = subset['PTAL'].max() - subset['PTAL']
-        subset['Energy_All_rev'] = subset['Energy_All'].max() - subset['Energy_All']
-        subset['Digital Propensity Score_rev'] = (
-                subset['Digital Propensity Score'].max() - subset['Digital Propensity Score']
-        )
-
     # Ensure required weight features exist and fill missing
     for col in weights:
         if col not in train.columns:
@@ -109,10 +101,10 @@ def train_eval_models(df, save_models=True):
     # Select features, excluding identifiers and target
     exclude = [
         'LSOA code', 'Month', 'Burglary Count', 'Year', 'IMD Score',
-        'Digital Propensity Score', 'Energy_All', 'Mean Age', 'Custom_IMD_Score',
+        'Custom_IMD_Score', 'Mean Male Age', 'Mean Female Age',
         'Male/Female Ratio', 'AvPTAI2015_rev', 'Digital Propensity Score_rev',
         'Energy_All_rev', 'Burglary Count_SpatailLag1', 'PTAL_rev', 'PTAL',
-        'AvPTAI2015', 'GIZ','Crime Domain','Female','Male', 'Crime Domain'
+        'f. Crime Domain','Female','Male', 'Population',  'AvPTAI2015_norm'
     ]
     features = [c for c in train.columns if c not in exclude]
     print(f"Number of features: {len(features)}")
